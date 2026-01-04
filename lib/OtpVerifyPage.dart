@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'HomePage.dart';
+import 'LoginEntryPage.dart';
 import 'MainScreen.dart';
 
 class OtpVerifyPage extends StatefulWidget {
@@ -202,7 +203,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const MainScreen(),
+                      builder: (context) => const LoginEntryPage(),
                     ),
                         (route) => false,
                   );

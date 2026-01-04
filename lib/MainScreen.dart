@@ -1,11 +1,24 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 import 'HomePage.dart';
+import 'PaymentHistoryTab.dart';
 import 'ProfilePage.dart';
+import 'SessionsPage.dart';
+import 'api/user_model.dart';
+
+
+import 'package:flutter/material.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final String doctorId;
+  final UserModel user;
+
+  const MainScreen({
+    super.key,
+    required this.doctorId,
+    required this.user,
+  });
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -14,86 +27,122 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> pages = const [
-    HomePage(),
-    ProfilePage(),
-  ];
+  /// 🔑 KEYS
+  final GlobalKey<SessionsPageState> _sessionsKey =
+  GlobalKey<SessionsPageState>();
+  final GlobalKey<PaymentHistoryTabState> _paymentKey =
+  GlobalKey<PaymentHistoryTabState>();
+
+  late final List<Widget> _pages;
+
+  /// 🎨 COLORS
+  static const Color primaryColor = Color(0xFF2563EB);
+  static const Color inactiveColor = Color(0xFF94A3B8);
+  static const Color bgColor = Colors.white;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pages = [
+      HomePage(
+        doctorId: widget.doctorId,
+        username: widget.user.username,
+      ),
+      PaymentHistoryTab(
+        key: _paymentKey,
+        doctorId: widget.doctorId,
+        username: widget.user.username,
+      ),
+      SessionsPage(
+        key: _sessionsKey,
+        doctorId: widget.doctorId,
+        username: widget.user.username,
+      ),
+      ProfilePage(user: widget.user),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F8FF),
-      body: pages[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
 
-      // 🔹 CUSTOM FLOATING BOTTOM BAR
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Container(
-          height: 64,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(4, (index) {
-              return _navItem(
-                icon: _getIcon(index),
-                index: index,
-              );
-            }),
-          ),
+      /// 🔻 ANIMATED BOTTOM BAR
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: bgColor,
+
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          currentIndex: _currentIndex,
+          backgroundColor: bgColor,
+          selectedItemColor: primaryColor,
+          unselectedItemColor: inactiveColor,
+          selectedFontSize: 12,
+          unselectedFontSize: 11,
+          onTap: _onTabChanged,
+          items: [
+            _navItem(Icons.event, "Appointments", 0),
+            _navItem(Icons.history, "Payments", 1),
+            _navItem(Icons.video_camera_front, "Sessions", 2),
+            _navItem(Icons.person, "Profile", 3),
+          ],
         ),
       ),
     );
   }
 
-  Widget _navItem({required IconData icon, required int index}) {
+  /// 🔄 TAB CHANGE HANDLER
+  void _onTabChanged(int index) {
+    setState(() => _currentIndex = index);
+
+    if (index == 2) {
+      debugPrint("🔁 Reload Sessions");
+      _sessionsKey.currentState?.loadSessions();
+    }
+
+    if (index == 1) {
+      debugPrint("🔁 Reload Payment History");
+      _paymentKey.currentState?.reload();
+    }
+  }
+
+  /// 🎯 ANIMATED NAV ITEM
+  BottomNavigationBarItem _navItem(
+      IconData icon,
+      String label,
+      int index,
+      ) {
     final bool isSelected = _currentIndex == index;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
-      },
-      child: AnimatedContainer(
+    return BottomNavigationBarItem(
+      label: label,
+      icon: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF1E3CFF).withOpacity(0.12)
+              ? primaryColor.withOpacity(0.12)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
           icon,
-          size: 26,
-          color: isSelected
-              ? const Color(0xFF1E3CFF)
-              : Colors.grey,
+          size: isSelected ? 26 : 22,
         ),
       ),
     );
   }
-
-  IconData _getIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.home;
-      case 1:
-        return Icons.settings;
-      case 2:
-        return Icons.description;
-      default:
-        return Icons.person;
-    }
-  }
 }
+
+
+
+
+
+
