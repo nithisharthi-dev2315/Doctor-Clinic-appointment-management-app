@@ -108,7 +108,7 @@ class _BookSessionDialogState extends State<BookSessionDialog> {
       );
 
       if (paymentResponse.success) {
-        _toast("Payment link created");
+        _toast("Session booked successfully");
         Navigator.pop(context, true);
       } else {
         _toast(paymentResponse.message);
@@ -289,6 +289,7 @@ class _BookSessionDialogState extends State<BookSessionDialog> {
   void _showPackageSheet() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white, // ✅ white background
       shape: const RoundedRectangleBorder(
         borderRadius:
         BorderRadius.vertical(top: Radius.circular(20)),
@@ -402,9 +403,24 @@ class _BookSessionDialogState extends State<BookSessionDialog> {
   }
 
   void _toast(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF0D9488),
+        behavior: SnackBarBehavior.floating,
+        content: Center(
+          child: Text(
+            msg,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold, // ✅ bold
+            ),
+          ),
+        ),
+      ),
+    );
   }
+
 
   @override
   void dispose() {

@@ -1,18 +1,21 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../SessionUpdateRequest.dart';
 import '../model/AddSessionRequest.dart';
 import '../model/AddSessionResponsee.dart';
 import '../model/BookSessionPackage.dart';
 import '../model/ConcernModel.dart';
 import '../model/CreatePaymentLinkRequest.dart';
 import '../model/CreatePaymentLinkResponse.dart';
+import '../model/CreateRoomResponse.dart';
 import '../model/DoctorModel.dart';
 import '../model/DoctorPayment.dart';
 import '../model/DoctorPaymentsResponse.dart';
 import '../model/EnquiryRequest.dart';
 import '../model/EnquiryResponse.dart';
 import '../model/PaymentHistoryResponse.dart';
+import '../model/UpdateEnquiryResponse.dart';
 import '../model/appointment_request.dart';
 import '../model/appointment_response.dart';
 import '../utils/ApiConstants.dart';
@@ -146,15 +149,16 @@ import '../utils/ApiConstants.dart';
     }
   }
 
-  static const _baseUrl1 =
+  static const getdocurl =
       "https://srv1090011.hstgr.cloud/api/add_sessions";
 
   static Future<List<DoctorPayment>> getDoctorPayments({
     required String doctorId,
     required String username,
-  }) async {
+  }) async
+  {
 
-    final url = Uri.parse("$_baseUrl1/fetch_paidsessions_simple");
+    final url = Uri.parse("$getdocurl/fetch_paidsessions_simple");
 
     final response = await http.post(
       url,
@@ -356,4 +360,142 @@ import '../utils/ApiConstants.dart';
       throw Exception(data["message"] ?? "Failed to add session");
     }
   }
-}
+
+  static Future<CreateRoomResponse> createSessionRoom({
+    required String sessionObjectId,
+    required int sessionIndex,
+    required String doctorId,
+    required String treatment,
+  }) async
+  {
+    final url = Uri.parse(
+      "https://srv1090011.hstgr.cloud/api/add_sessions/"
+          "$sessionObjectId/session/$sessionIndex/create_room",
+    );
+
+
+    print('url===================${url}');
+
+    final res = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "doctorAssigned": doctorId,
+        "treatment": treatment,
+      }),
+    );
+
+    if (res.statusCode == 200) {
+      return CreateRoomResponse.fromJson(jsonDecode(res.body));
+    } else {
+      throw Exception("Create room failed");
+    }
+  }
+  static const String editsession =
+      "https://srv1090011.hstgr.cloud/api/add_sessions";
+
+  /// UPDATE SESSIONS
+  static Future<Map<String, dynamic>> updateSessions(
+      SessionUpdateRequest request) async {
+
+    /// 🔹 PRINT REQUEST
+    debugPrint("===== UPDATE SESSIONS API REQUEST =====");
+    debugPrint("URL  : $editsession/update");
+    debugPrint("BODY : ${jsonEncode(request.toJson())}");
+    debugPrint("=====================================");
+
+    final response = await http.post(
+      Uri.parse("$editsession/update"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(request.toJson()),
+    );
+
+    /// 🔹 PRINT RESPONSE
+    debugPrint("===== UPDATE SESSIONS API RESPONSE =====");
+    debugPrint("Status Code : ${response.statusCode}");
+    debugPrint("Body        : ${response.body}");
+    debugPrint("======================================");
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        "Server error | ${response.statusCode} | ${response.body}",
+      );
+    }
+
+    final body = jsonDecode(response.body);
+
+    if (body["success"] != true) {
+      throw Exception(body["message"] ?? "Update failed");
+    }
+
+    /// ✅ RETURN RESPONSE
+    return body;
+  }
+  static Future<Map<String, dynamic>> updateEnquiry({
+    required String addSessionId,
+    required String sessionIndex,
+    required String chiefComplaints,
+    required String enquiryNotes,
+    required String updatedBy,
+  }) async {
+    final url = Uri.parse(
+      "https://srv1090011.hstgr.cloud/api/add_sessions/update-enquiry",
+    );
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "addSessionId": addSessionId,
+        "sessionIndex": sessionIndex,
+        "chiefComplaints": chiefComplaints,
+        "enquiryNotes": enquiryNotes,
+        "updatedBy": updatedBy,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    debugPrint("UpdateEnquiry Parsed Data: $data");
+
+    if (response.statusCode == 200 && data["success"] == true) {
+      return data; // ✅ JUST RETURN RAW MAP
+    } else {
+      throw Exception(data["message"] ?? "Failed to update enquiry");
+    }
+  }
+
+
+
+  /// 🔹 SEND CONSENT API
+  static Future<bool> sendConsentApi({
+    required String appointmentId,
+    required String doctorName,
+    required String patientName,
+    required String patientPhone,
+    required String sessionId,
+  }) async {
+    final Uri url = Uri.parse(
+      "https://srv1090011.hstgr.cloud/api/consent/send/$appointmentId",
+    );
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "appointmentId": appointmentId,
+        "doctorName": doctorName,
+        "patientName": patientName,
+        "patientPhone": patientPhone,
+        "sessionId": sessionId,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    return response.statusCode == 200 && data["success"] == true;
+  }
+
+
+
+  }

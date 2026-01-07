@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'AddSessionDialog.dart';
+import 'Apiservice/appointment_api_service.dart';
 import 'model/PaymentHistoryItem.dart';
 
 class SessionDetailsPage extends StatelessWidget {
@@ -59,15 +60,31 @@ class SessionDetailsPage extends StatelessWidget {
                   text: "Send Consent",
                   color: const Color(0xFF34D399),
                   onTap: () async {
-                    final uri = Uri.parse(payment.linkShortUrl);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(
-                        uri,
-                        mode: LaunchMode.externalApplication,
+                    try {
+                      final success =
+                      await AppointmentApiService.sendConsentApi(
+                        appointmentId: payment.appointmentId,
+                        doctorName: payment.doctorAssigned,
+                        patientName: payment.customer.name,
+                        patientPhone: payment.customer.contact,
+                        sessionId: payment.sessionId,
                       );
+                      if (success && context.mounted) {
+                        _showConsentSuccessDialog(context);
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Failed to send consent"),
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
+
+
               ],
             ),
 
@@ -84,6 +101,84 @@ class SessionDetailsPage extends StatelessWidget {
   // ---------------------------------------------------------------------------
   // 🔹 ADD SESSION DIALOG (WITH INSET + POP ANIMATION)
   // ---------------------------------------------------------------------------
+
+  String formatAmount(dynamic amount, String currency) {
+    final int minorUnits = int.tryParse(amount.toString()) ?? 0;
+
+    // Convert from minor units (paise / cents)
+    final num value = minorUnits / 100;
+
+    // Remove .00 if whole number
+    if (value % 1 == 0) {
+      return value.toInt().toString();
+    }
+
+    return value.toStringAsFixed(2);
+  }
+
+  String currencySymbol(String currency) {
+    switch (currency.toUpperCase()) {
+      case 'INR':
+        return '₹';
+      case 'USD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      default:
+        return currency; // fallback
+    }
+  }
+
+
+  void _showConsentSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Icon(
+          Icons.verified,
+          color: Color(0xFF34D399),
+          size: 48,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Consent Sent Successfully",
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Consent link has been sent to the patient's WhatsApp number.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
 
   Future<bool?> _showAddSessionDialog(BuildContext context) {
     return showGeneralDialog<bool>(
@@ -105,7 +200,7 @@ class SessionDetailsPage extends StatelessWidget {
                 sessionsCount: payment.session.sessionsCount,
                 appointmentId: payment.appointmentId,
                 sessionId: payment.sessionId,
-                assigned: payment.id,
+                assigned: payment.doctorAssigned,
               ),
             ),
           ),
@@ -148,8 +243,8 @@ class SessionDetailsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _infoRow("Payment ID", payment.id),
-          _infoRow("Appointment ID", payment.appointmentId),
+     /*     _infoRow("Payment ID", payment.id),
+          _infoRow("Appointment ID", payment.appointmentId),*/
           _infoRow("Customer", payment.customer.name),
           _infoRow("Package", payment.session.packageName),
           _infoRow("Concern", payment.session.concern),
@@ -162,8 +257,9 @@ class SessionDetailsPage extends StatelessWidget {
           ),
           _infoRow(
             "Amount",
-            "₹${payment.amount} ${payment.currency}",
+            "${currencySymbol(payment.currency)} ${formatAmount(payment.amount, payment.currency)}",
           ),
+
           _infoRow(
             "Status",
             payment.status.toUpperCase(),

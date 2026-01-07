@@ -1,5 +1,3 @@
-
-
 import 'PaymentHistoryItem.dart';
 
 class PaymentHistoryResponse {
@@ -13,8 +11,7 @@ class PaymentHistoryResponse {
     required this.payments,
   });
 
-  factory PaymentHistoryResponse.fromJson(
-      Map<String, dynamic> json) {
+  factory PaymentHistoryResponse.fromJson(Map<String, dynamic> json) {
     return PaymentHistoryResponse(
       success: json['success'] ?? false,
       count: json['count'] ?? 0,

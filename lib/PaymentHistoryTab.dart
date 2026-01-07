@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 
 import 'Apiservice/appointment_api_service.dart';
 import 'SessionDetailsPage.dart';
 import 'model/PaymentHistoryItem.dart';
 import 'model/PaymentHistoryResponse.dart';
-
-import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class PaymentHistoryTab extends StatefulWidget {
   final String doctorId;
@@ -102,9 +99,9 @@ class PaymentHistoryTabState extends State<PaymentHistoryTab> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Image.asset(
-                            "assets/image/No Data.png",
-                            width: 100,
-                            height: 100,
+                            "assert/image/No Data.png",
+                            width: 150,
+                            height: 150,
                           ),
                           const SizedBox(height: 16),
                           const Text(
@@ -209,7 +206,8 @@ class PaymentHistoryTabState extends State<PaymentHistoryTab> {
 
             /// AMOUNT
             Text(
-              "₹${p.amount}",
+              "${currencySymbol(p.currency)}"
+                  "${formatAmount(p.amount, p.currency)}",
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
@@ -260,6 +258,36 @@ class PaymentHistoryTabState extends State<PaymentHistoryTab> {
       ),
     );
   }
+
+  String formatAmount(dynamic amount, String currency) {
+    final int minorUnits = int.tryParse(amount.toString()) ?? 0;
+
+    // Most currencies (INR, USD, EUR) use 2 decimal minor units
+    final num value = minorUnits / 100;
+
+    // Remove .00 if not needed
+    if (value % 1 == 0) {
+      return value.toInt().toString();
+    }
+
+    return value.toStringAsFixed(2);
+  }
+
+  String currencySymbol(String currency) {
+    switch (currency.toUpperCase()) {
+      case 'INR':
+        return '₹';
+      case 'USD':
+        return '\$';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      default:
+        return currency; // fallback
+    }
+  }
+
 
   /// STATUS CHIP
   Widget _statusChip(String status) {

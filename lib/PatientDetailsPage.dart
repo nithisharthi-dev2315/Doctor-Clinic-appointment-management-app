@@ -86,6 +86,14 @@ class PatientDetailsPage extends StatelessWidget {
             appointment.status.toUpperCase(),
             isStatus: true,
           ),
+          _infoRow(
+            "ChiefComplaint",
+            appointment.chiefComplaints ?? "-",
+          ),
+          _infoRow(
+            "Notes",
+            appointment.notes ?? "-",
+          ),
         ],
       ),
     );

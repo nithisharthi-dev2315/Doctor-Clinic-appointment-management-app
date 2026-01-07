@@ -8,6 +8,7 @@ class PaymentHistoryItem {
   final int amount;
   final String currency;
   final String status;
+  final String doctorAssigned;
   final String linkShortUrl;
   final DateTime createdAt;
   final PaymentHistoryCustomer customer;
@@ -20,14 +21,14 @@ class PaymentHistoryItem {
     required this.amount,
     required this.currency,
     required this.status,
+    required this.doctorAssigned,
     required this.linkShortUrl,
     required this.createdAt,
     required this.customer,
     required this.session,
   });
 
-  factory PaymentHistoryItem.fromJson(
-      Map<String, dynamic> json) {
+  factory PaymentHistoryItem.fromJson(Map<String, dynamic> json) {
     return PaymentHistoryItem(
       id: json['_id'] ?? '',
       appointmentId: json['appointmentId'] ?? '',
@@ -35,12 +36,17 @@ class PaymentHistoryItem {
       amount: json['amount'] ?? 0,
       currency: json['currency'] ?? '',
       status: json['status'] ?? '',
+      doctorAssigned: json['doctorAssigned'] ?? '',
       linkShortUrl: json['linkShortUrl'] ?? '',
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
       customer: PaymentHistoryCustomer.fromJson(
-          json['customer'] ?? {}),
+        json['customer'] ?? {},
+      ),
       session: PaymentHistorySession.fromJson(
-          json['session'] ?? {}),
+        json['session'] ?? {},
+      ),
     );
   }
 }

@@ -13,8 +13,7 @@ class PaymentHistorySession {
     required this.durationWeeks,
   });
 
-  factory PaymentHistorySession.fromJson(
-      Map<String, dynamic> json) {
+  factory PaymentHistorySession.fromJson(Map<String, dynamic> json) {
     return PaymentHistorySession(
       id: json['_id'] ?? '',
       concern: json['concern'] ?? '',

@@ -7,10 +7,13 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'Apiservice/appointment_api_service.dart';
+import 'SessionDetailsDialog.dart';
 import 'SessionDetailsPage.dart';
+import 'SessionSchudleDetailPage.dart';
 import 'model/DoctorPayment.dart';
 
 enum DateFilterType { today, upcoming, custom }
+
 
 class SessionsPage extends StatefulWidget {
   final String doctorId;
@@ -68,36 +71,57 @@ class SessionsPageState extends State<SessionsPage> {
     }
   }
 
+
+  String formatOnlyDate(DateTime dateTime) {
+    return DateFormat("dd MMM yyyy").format(dateTime);
+  }
+
+  String formatOnlyTime(DateTime dateTime) {
+    return DateFormat("hh:mm a").format(dateTime);
+  }
+
+
   // =========================
-  // 🔹 APPLY FILTER
+  // 🔹 GET SESSION DATE
+  // =========================
+  DateTime? _getSessionDate(DoctorPayment payment) {
+    if (payment.sessions.isEmpty) return null;
+    return payment.sessions.first.scheduledAt.toLocal();
+  }
+
+  // =========================
+  // 🔹 APPLY FILTER (FIXED)
   // =========================
   void _applyFilter() {
     final now = DateTime.now();
 
-    switch (_filterType) {
-      case DateFilterType.today:
-        _filteredSessions = _allSessions.where((e) {
-          final d = e.createdAt;
-          return d.year == now.year &&
-              d.month == now.month &&
-              d.day == now.day;
-        }).toList();
-        break;
+    _filteredSessions = _allSessions.where((payment) {
+      final sessionDate = _getSessionDate(payment);
+      if (sessionDate == null) return false;
 
-      case DateFilterType.upcoming:
-        _filteredSessions =
-            _allSessions.where((e) => e.createdAt.isAfter(now)).toList();
-        break;
+      switch (_filterType) {
+        case DateFilterType.today:
+          return sessionDate.year == now.year &&
+              sessionDate.month == now.month &&
+              sessionDate.day == now.day;
 
-      case DateFilterType.custom:
-        _filteredSessions = _allSessions.where((e) {
-          final d = e.createdAt;
-          return d.year == _selectedDate!.year &&
-              d.month == _selectedDate!.month &&
-              d.day == _selectedDate!.day;
-        }).toList();
-        break;
-    }
+        case DateFilterType.upcoming:
+          return sessionDate.isAfter(now);
+
+        case DateFilterType.custom:
+          if (_selectedDate == null) return false;
+          return sessionDate.year == _selectedDate!.year &&
+              sessionDate.month == _selectedDate!.month &&
+              sessionDate.day == _selectedDate!.day;
+      }
+    }).toList();
+
+    /// 🔹 Sort by session time
+    _filteredSessions.sort((a, b) {
+      final aDate = _getSessionDate(a)!;
+      final bDate = _getSessionDate(b)!;
+      return aDate.compareTo(bDate);
+    });
   }
 
   // =========================
@@ -147,8 +171,7 @@ class SessionsPageState extends State<SessionsPage> {
             color: const Color(0xFF0F172A),
           ),
         ),
-        iconTheme:
-        const IconThemeData(color: Color(0xFF0F172A)),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
       ),
       body: Column(
         children: [
@@ -191,8 +214,7 @@ class SessionsPageState extends State<SessionsPage> {
         });
       },
       child: Container(
-        padding:
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: selected
               ? const Color(0xFF2563EB)
@@ -215,8 +237,7 @@ class SessionsPageState extends State<SessionsPage> {
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: () async {
-        final yesterday =
-        DateTime.now().subtract(const Duration(days: 1));
+        final yesterday = DateTime.now().subtract(const Duration(days: 1));
 
         final picked = await showDatePicker(
           context: context,
@@ -234,8 +255,7 @@ class SessionsPageState extends State<SessionsPage> {
         }
       },
       child: Container(
-        padding:
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(10),
@@ -251,8 +271,7 @@ class SessionsPageState extends State<SessionsPage> {
             Text(
               _selectedDate == null
                   ? "Past Date"
-                  : DateFormat("dd MMM yyyy")
-                  .format(_selectedDate!),
+                  : DateFormat("dd MMM yyyy").format(_selectedDate!),
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -269,6 +288,7 @@ class SessionsPageState extends State<SessionsPage> {
   // 🔹 SESSIONS LIST
   // =========================
   Widget _sessionsList() {
+
     return RefreshIndicator(
       color: const Color(0xFF2563EB),
       onRefresh: loadSessions,
@@ -286,19 +306,19 @@ class SessionsPageState extends State<SessionsPage> {
         children: [
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
-            child: Center(
+            child:Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Image.asset(
-                    "assert/image/session.png",
-                    width: 80,
-                    height: 80,
+                    "assert/image/No Data.png", // ✅ update path if needed
+                    width: 150,
+                    height: 150,
+                    fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "No payment history found",
+                    "No session history found",
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -309,141 +329,156 @@ class SessionsPageState extends State<SessionsPage> {
                 ],
               ),
             ),
+
           ),
         ],
       )
-
           : ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         itemCount: _filteredSessions.length,
-        separatorBuilder: (_, __) =>
-        const SizedBox(height: 16),
+        separatorBuilder: (_, __) => const SizedBox(height: 16),
         itemBuilder: (context, index) {
           final item = _filteredSessions[index];
           final statusColor =
           getPaymentStatusColor(item.status);
 
-          return Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: const Color(0xFFE5E7EB)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          final sessionDate =
+          item.sessions.first.scheduledAt.toLocal();
+          final SessionSlot slot = item.sessions.first;
 
-                /// CUSTOMER + STATUS
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.customer.name,
+          final DateTime sessionDateTime = slot.scheduledAt;
+
+
+          return InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => SessionDetailsDialog(
+                  payment: item, // ✅ FIXED
+                  doctorId: widget.doctorId,
+                  username: item.createdByDoctor.username, // ✅ FIXED
+                ),
+              );
+            },
+
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFFE5E7EB),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  /// NAME + STATUS
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.customer.name,
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              getPaymentStatusIcon(item.status),
+                              size: 14,
+                              color: statusColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              item.status.toUpperCase(),
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: statusColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    "📞 ${item.customer.contact}",
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: const Color(0xFF475569),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Text(
+                    item.packageSnapshot.packageName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF2563EB),
+                    ),
+                  ),
+
+                  Text(
+                    item.packageSnapshot.concern,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Text(
+                        "${item.sessions.length} session(s)",
                         style: GoogleFonts.poppins(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                    Container(
-                      padding:
-                      const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6),
-                      decoration: BoxDecoration(
-                        color:
-                        statusColor.withOpacity(0.1),
-                        borderRadius:
-                        BorderRadius.circular(20),
+                      const Spacer(),
+                      Text(
+                        "${formatOnlyDate(sessionDateTime)} - ${formatOnlyTime(sessionDateTime)}",
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF64748B),
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            getPaymentStatusIcon(
-                                item.status),
-                            size: 14,
-                            color: statusColor,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            item.status.toUpperCase(),
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight:
-                              FontWeight.w600,
-                              color: statusColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
 
-                const SizedBox(height: 6),
-
-                Text(
-                  "📞 ${item.customer.contact}",
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: const Color(0xFF475569),
+                    ],
                   ),
-                ),
-
-                const SizedBox(height: 12),
-
-                Text(
-                  item.packageSnapshot.packageName,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF2563EB),
-                  ),
-                ),
-
-                Text(
-                  item.packageSnapshot.concern,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Text(
-                      "${item.sessions.length} session(s)",
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      DateFormat(
-                          "dd MMM yyyy, hh:mm a")
-                          .format(item.createdAt),
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color:
-                        const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           );
+
         },
       ),
     );
   }
 }
+
 
 
 

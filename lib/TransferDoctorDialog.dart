@@ -152,32 +152,48 @@ class _TransferDoctorDialogState extends State<TransferDoctorDialog> {
                 : DropdownButtonFormField<String>(
               value: selectedDoctorId,
               isExpanded: true,
+
               decoration: InputDecoration(
                 hintText: "Choose doctor",
                 isDense: true,
-                contentPadding:
-                const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 12),
+                filled: true,                    // ✅ REQUIRED
+                fillColor: Colors.white,         // ✅ FIELD WHITE
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
                 border: OutlineInputBorder(
-                  borderRadius:
-                  BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
+              dropdownColor: Colors.white,       // ✅ POPUP WHITE
               items: doctors.map((d) {
                 return DropdownMenuItem<String>(
                   value: d['id'],
-                  child: Text(
-                    d['name'] ?? "",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Container(
+                    color: Colors.white,          // ✅ ITEM WHITE
+                    child: Text(
+                      d['name'] ?? "",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.black),
+                    ),
                   ),
                 );
               }).toList(),
-              onChanged: (v) =>
-                  setState(() => selectedDoctorId = v),
+
+              onChanged: (v) => setState(() => selectedDoctorId = v),
             ),
 
-            const SizedBox(height: 14),
+
+        const SizedBox(height: 14),
 
             /// REASON
             const Text(
@@ -257,9 +273,24 @@ class _TransferDoctorDialogState extends State<TransferDoctorDialog> {
   }
 
   void _toast(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF0D9488),
+        behavior: SnackBarBehavior.floating,
+        content: Center(
+          child: Text(
+            msg,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold, // ✅ bold
+            ),
+          ),
+        ),
+      ),
+    );
   }
+
 
   @override
   void dispose() {

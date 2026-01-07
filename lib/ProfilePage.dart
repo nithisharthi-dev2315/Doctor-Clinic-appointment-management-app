@@ -121,8 +121,10 @@ class ProfilePage extends StatelessWidget {
                     "Logout",
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w500,
+                      color: Colors.white, // ✅ white color
                     ),
                   ),
+
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFDC2626),
                     side: const BorderSide(color: Color(0xFFDC2626)),

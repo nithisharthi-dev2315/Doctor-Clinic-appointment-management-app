@@ -313,41 +313,86 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       debugPrint(e.toString());
     }
   }
-
   Widget _concernDropdown() {
     return DropdownButtonFormField<ConcernModel>(
       value: selectedConcern,
-      hint: const Text("Select your primary concern"),
+
+      hint: Text(
+        "Select your primary concern",
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          color: Colors.grey,
+        ),
+      ),
+
       validator: (v) =>
       v == null ? "Please select a primary concern" : null,
+
       items: concerns
           .map(
             (e) => DropdownMenuItem<ConcernModel>(
           value: e,
-          child: Text(e.concern),
+          child: Text(
+            e.concern,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ),
       )
           .toList(),
+
       onChanged: (v) {
         setState(() => selectedConcern = v);
       },
+
+      style: GoogleFonts.poppins(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: Colors.black,
+      ),
+
       decoration: InputDecoration(
+        isDense: true, // ✅ compact height
+        filled: true,  // ✅ white background
+        fillColor: Colors.white,
+
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10, // 🔽 smaller height
+        ),
+
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.grey),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.black), // 🔥 black focus
+        ),
+
+        errorStyle: GoogleFonts.poppins(
+          fontSize: 11,
+          color: Colors.red,
         ),
       ),
     );
   }
 
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: Colors.white,
+
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
           icon: const Icon(
             CupertinoIcons.back,
@@ -374,14 +419,14 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
                 /// FULL NAME
                 _label("Full Name"),
-                _textField(
+                _smallTextField(
                   controller: nameController,
                   hint: "John Doe",
                   validator: (v) =>
                   v == null || v.trim().isEmpty ? "Name is required" : null,
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
                 /// AGE + GENDER
                 Row(
@@ -401,7 +446,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _label("Gender"),
-                          _dropdown(
+                          _smallDropdown(
                             value: gender,
                             hint: "Select",
                             items: const ["Male", "Female", "Other"],
@@ -422,7 +467,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
                 const SizedBox(height: 16),
                 _label("Gmail"),
-                _textField(
+                _smallTextField(
                   controller: emailController,
                   hint:  "you@example.com",
                   keyboard: TextInputType.emailAddress,
@@ -442,7 +487,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
                 /// LANGUAGE
                 _label("Preferred Language"),
-                _dropdown(
+                _smallDropdown(
                   value: language,
                   hint: "Select your preferred language",
                   items: const ["English", "Tamil", "Hindi"],
@@ -476,12 +521,12 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
                 /// COUPON
                 _label("Coupon Code (optional)"),
-                _textField(
+                _smallTextField(
                   controller: couponController,
                   hint: "Enter coupon code (if any)",
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 25),
 
                 /// SUBMIT
                 SizedBox(
@@ -544,10 +589,17 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
 
   Future<void> submitAppointment() async {
-    // 🔒 Extra safety (recommended)
     if (selectedConcern == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select primary concern")),
+        SnackBar(
+          content: const Text(
+            "Please select primary concern",
+            style: TextStyle(color: Colors.black),
+          ),
+          backgroundColor: Color(0xFF0D9488),
+          behavior: SnackBarBehavior.floating,
+          elevation: 4,
+        ),
       );
       return;
     }
@@ -577,16 +629,42 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       final response =
       await AppointmentApiService.createAppointment(request);
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(response.message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            " Appointment added successfully",
+            style: const TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          backgroundColor: Color(0xFF0D9488),
+          behavior: SnackBarBehavior.floating,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+
 
       Navigator.pop(context, true);
     } catch (e) {
       debugPrint("API ERROR: $e");
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Something went wrong")),
+        SnackBar(
+          content: const Text(
+            "Something went wrong",
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: const Color(0xFF0D9488), // ✅ updated color (teal)
+          behavior: SnackBarBehavior.floating,
+          elevation: 4,
+        ),
       );
     }
+
   }
   String convertTo24Hour(TimeOfDay time) {
     final hour = time.hour.toString().padLeft(2, '0');
@@ -600,19 +678,28 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _label("Phone / WhatsApp"),
+
         Container(
-          height: 52,
+          height: 45, // 🔽 smaller height
           decoration: BoxDecoration(
-            border: Border.all(color: phoneError != null ? Colors.red : Colors.grey),
-            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: phoneError != null ? Colors.red : Colors.grey,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(8), // 🔽 smaller radius
             color: Colors.white,
           ),
           child: Row(
             children: [
+              // 🔹 Country code picker (compact)
               CountryCodePicker(
                 initialSelection: 'IN',
                 favorite: const ['+91', 'IN'],
                 padding: EdgeInsets.zero,
+                textStyle: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
                 onChanged: (code) {
                   final dial = code.dialCode ?? '+91';
                   final range =
@@ -627,28 +714,51 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                   });
                 },
               ),
+
+              // 🔹 Phone input
               Expanded(
                 child: TextField(
                   controller: phoneController,
                   keyboardType: TextInputType.phone,
                   maxLength: maxLength,
-                  decoration: const InputDecoration(
+
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+
+                  decoration: InputDecoration(
+                    isDense: true, // ✅ compact
                     hintText: "Enter phone number",
+                    hintStyle: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey,
+                    ),
                     border: InputBorder.none,
                     counterText: "",
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 8,
+                    ),
                   ),
+
                   onChanged: (_) => setState(() => phoneError = null),
                 ),
               ),
             ],
           ),
         ),
+
+        // 🔹 Error text (small)
         if (phoneError != null)
           Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.only(top: 3),
             child: Text(
               phoneError!,
-              style: const TextStyle(color: Colors.red, fontSize: 12),
+              style: GoogleFonts.poppins(
+                color: Colors.red,
+                fontSize: 11,
+              ),
             ),
           ),
       ],
@@ -659,9 +769,10 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
 
 
+
   Widget _label(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 3),
       child: Text(
         text,
         style: GoogleFonts.poppins(
@@ -674,7 +785,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   }
 
 
-  Widget _textField({
+  Widget _smallTextField({
     required TextEditingController controller,
     required String hint,
     TextInputType keyboard = TextInputType.text,
@@ -685,35 +796,53 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       keyboardType: keyboard,
       validator: validator,
 
-      // 🔹 Input text style
+      // 🔹 Smaller input text
       style: GoogleFonts.poppins(
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: FontWeight.w500,
         color: Colors.black,
       ),
 
       decoration: InputDecoration(
+        isDense: true, // ✅ makes field compact
         hintText: hint,
 
-        // 🔹 Hint style
+        // 🔹 Smaller hint text
         hintStyle: GoogleFonts.poppins(
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: FontWeight.w400,
           color: Colors.grey,
         ),
 
-        // 🔹 Error text style
+        // 🔹 Error text
         errorStyle: GoogleFonts.poppins(
-          fontSize: 12,
+          fontSize: 11,
           color: Colors.red,
         ),
 
+        // 🔹 Reduce height using padding
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 15,
+        ),
+
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8), // smaller radius
+        ),
+
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.grey),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.blue),
         ),
       ),
     );
   }
+
 
 
   Widget _ageField() {
@@ -722,7 +851,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       keyboardType: TextInputType.number,
       inputFormatters: [
         FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(3), // max 3 digits
+        LengthLimitingTextInputFormatter(3),
       ],
       validator: (v) {
         if (v == null || v.isEmpty) return "Age is required";
@@ -731,17 +860,52 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
         if (age < 1 || age > 120) return "Age must be between 1 and 120";
         return null;
       },
+
+      // 🔹 Smaller input text
+      style: GoogleFonts.poppins(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+      ),
+
       decoration: InputDecoration(
+        isDense: true,
         hintText: "Age",
+
+        hintStyle: GoogleFonts.poppins(
+          fontSize: 13,
+          color: Colors.grey,
+        ),
+
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
+
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.grey),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.blue),
+        ),
+
+        errorStyle: GoogleFonts.poppins(
+          fontSize: 11,
+          color: Colors.red,
         ),
       ),
     );
   }
 
 
-  Widget _dropdown({
+
+  Widget _smallDropdown({
     required String? value,
     required String hint,
     required List<String> items,
@@ -751,21 +915,81 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     return DropdownButtonFormField<String>(
       value: value,
       validator: validator,
-      hint: Text(hint),
-      items: items
-          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-          .toList(),
       onChanged: onChanged,
+
+      // 🔹 Hint text
+      hint: Text(
+        hint,
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          color: Colors.grey,
+        ),
+      ),
+
+      // 🔹 Dropdown items
+      items: items
+          .map(
+            (e) => DropdownMenuItem<String>(
+          value: e,
+          child: Text(
+            e,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      )
+          .toList(),
+
       decoration: InputDecoration(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        isDense: true, // ✅ compact height
+        filled: true, // ✅ white background
+        fillColor: Colors.white,
+
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10, // 🔽 reduce for more compact
+        ),
+
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.grey),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(
+            color: Colors.grey,
+            width: 1.2,
+          ),
+        ),
+
+        errorStyle: GoogleFonts.poppins(
+          fontSize: 11,
+          color: Colors.red,
+        ),
+      ),
+
+      // 🔹 Selected value style
+      style: GoogleFonts.poppins(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: Colors.black,
       ),
     );
   }
+
 
   Widget _dateField() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       _label("Preferred Date"),
+      const SizedBox(height: 4),
       InkWell(
         onTap: pickDate,
         child: _pickerBox(
@@ -783,48 +1007,56 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       _label("Preferred Time"),
+      const SizedBox(height: 4),
       InkWell(
         onTap: pickTime,
         child: _pickerBox(
           text: selectedTime == null
               ? "--:--"
-              : selectedTime!.format(context), // 12 HOUR UI
+              : selectedTime!.format(context),
           icon: Icons.access_time,
           error: timeError != null,
         ),
       ),
     ],
   );
+
   Widget _pickerBox({
     required String text,
     required IconData icon,
     required bool error,
   }) {
     return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      height: 50, // 🔽 smaller height
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: error ? Colors.red : Colors.grey),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: error ? Colors.red : Colors.grey,
+          width: 1,
+        ),
         color: Colors.white,
       ),
       child: Row(
         children: [
-          Text(text),
+          Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.black,
+            ),
+          ),
           const Spacer(),
-          Icon(icon),
+          Icon(
+            icon,
+            size: 18, // 🔽 smaller icon
+            color: Colors.grey[700],
+          ),
         ],
       ),
     );
   }
 
-  Widget _errorText(String text) => Padding(
-    padding: const EdgeInsets.only(top: 4),
-    child: Text(
-      text,
-      style: const TextStyle(color: Colors.red, fontSize: 12),
-    ),
-  );
 
   @override
   void dispose() {

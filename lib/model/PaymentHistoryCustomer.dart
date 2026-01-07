@@ -9,8 +9,7 @@ class PaymentHistoryCustomer {
     required this.contact,
   });
 
-  factory PaymentHistoryCustomer.fromJson(
-      Map<String, dynamic> json) {
+  factory PaymentHistoryCustomer.fromJson(Map<String, dynamic> json) {
     return PaymentHistoryCustomer(
       name: json['name'] ?? '',
       email: json['email'] ?? '',

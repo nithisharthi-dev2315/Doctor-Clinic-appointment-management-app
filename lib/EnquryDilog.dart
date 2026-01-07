@@ -1,30 +1,51 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'Apiservice/appointment_api_service.dart';
-import 'model/EnquiryRequest.dart';
+import 'model/DoctorPayment.dart';
 
-class AddEnquiryDialog extends StatefulWidget {
-  final String appointmentId;
-  final String doctorId;
+class EnquiryDialog extends StatefulWidget {
+  final String addSessionId;
+  final String sessionIndex;
+  final String updatedBy; // doctorId
+  final String username;
+  final DoctorPayment payment;
 
-  const AddEnquiryDialog({
+  const EnquiryDialog({
     super.key,
-    required this.appointmentId,
-    required this.doctorId,
+    required this.addSessionId,
+    required this.sessionIndex,
+    required this.updatedBy,
+    required this.username,
+    required this.payment,
   });
 
   @override
-  State<AddEnquiryDialog> createState() => _AddEnquiryDialogState();
+  State<EnquiryDialog> createState() => _EnquiryDialogState();
 }
 
-class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
+class _EnquiryDialogState extends State<EnquiryDialog> {
   final TextEditingController chiefController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
 
   bool isLoading = false;
 
+  /// ✅ REQUIRED KEY (FIXES YOUR ERROR)
+  late List<bool> enquiryExpanded;
+
+  late final int currentSessionIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    currentSessionIndex = int.parse(widget.sessionIndex) - 1;
+
+    final session = widget.payment.sessions[currentSessionIndex];
+    chiefController.text = session.chiefComplaints ?? "";
+    notesController.text = session.enquiryNotes ?? "";
+  }
+
+  // ================= SUBMIT =================
   Future<void> _submitEnquiry() async {
     if (chiefController.text.trim().isEmpty) {
       _toast("Chief complaints required");
@@ -34,27 +55,73 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
     setState(() => isLoading = true);
 
     try {
-      final request = EnquiryRequest(
-        patientId: widget.appointmentId,
-        chiefComplaint: chiefController.text.trim(),
-        notes: notesController.text.trim(),
-        doctorAssigned: widget.doctorId,
+      await AppointmentApiService.updateEnquiry(
+        addSessionId: widget.addSessionId,
+        sessionIndex: widget.sessionIndex,
+        chiefComplaints: chiefController.text.trim(),
+        enquiryNotes: notesController.text.trim(),
+        updatedBy: widget.updatedBy,
       );
 
-      final response =
-      await AppointmentApiService.submitEnquiry(request);
+      /// 🔁 RELOAD FROM SERVER
+      final payments = await AppointmentApiService.getDoctorPayments(
+        doctorId: widget.updatedBy,
+        username: widget.username,
+      );
 
-      if (response.success) {
-        _toast("Enquiry save successful");
-        Navigator.pop(context);
-      }
+      /// 🔥 MATCH BY PAYMENT ID (NOT payments.first)
+      final updatedPayment = payments.firstWhere(
+            (p) => p.id == widget.addSessionId,
+        orElse: () => payments.first,
+      );
+
+      Navigator.pop(
+        context,
+        updatedPayment.sessions[currentSessionIndex], // ✅ RETURN SESSION
+      );
     } catch (e) {
-      _toast("Something went wrong");
+      _toast("Failed to update enquiry");
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
+
+  // ================= RELOAD =================
+  Future<void> _reloadDoctorPayments() async {
+    try {
+      final payments = await AppointmentApiService.getDoctorPayments(
+        doctorId: widget.updatedBy,
+        username: widget.username,
+      );
+
+      if (!mounted || payments.isEmpty) return;
+
+      final updatedSessions = payments.first.sessions;
+
+      if (currentSessionIndex >= updatedSessions.length) return;
+
+      setState(() {
+        /// ✅ UPDATE ONLY CURRENT SESSION
+        widget.payment.sessions[currentSessionIndex] =
+        updatedSessions[currentSessionIndex];
+
+        /// ✅ KEEP EXPANDED STATE SAFE
+        _syncExpanded();
+      });
+    } catch (e) {
+      debugPrint("Reload failed: $e");
+    }
+  }
+
+  void _syncExpanded() {
+    enquiryExpanded =
+    List<bool>.filled(widget.payment.sessions.length, false);
+  }
+
+
+
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -70,8 +137,7 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            /// ───── HEADER ─────
+            /// HEADER
             Row(
               children: [
                 const Icon(
@@ -84,24 +150,19 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
                   ),
                 ),
                 const Spacer(),
-                InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () => Navigator.pop(context),
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(Icons.close, size: 22),
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
                 )
               ],
             ),
 
             const SizedBox(height: 18),
 
-            /// ───── CHIEF COMPLAINT ─────
+            /// CHIEF COMPLAINT
             _section(
               title: "Chief Complaints",
               child: _inputField(
@@ -113,7 +174,7 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
 
             const SizedBox(height: 16),
 
-            /// ───── NOTES ─────
+            /// NOTES
             _section(
               title: "Doctor Notes (Optional)",
               child: _inputField(
@@ -125,7 +186,7 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
 
             const SizedBox(height: 26),
 
-            /// ───── ACTION BUTTON ─────
+            /// SUBMIT
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -133,7 +194,6 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
                 onPressed: isLoading ? null : _submitEnquiry,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2563EB),
-                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -147,13 +207,9 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
                     color: Colors.white,
                   ),
                 )
-                    : Text(
-                  "Submit Enquiry",
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+                    : const Text(
+                  "Add Enquiry",
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ),
@@ -163,7 +219,7 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
     );
   }
 
-  /// ───── SECTION WRAPPER ─────
+  // ================= HELPERS =================
   Widget _section({
     required String title,
     required Widget child,
@@ -176,14 +232,12 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
           style: GoogleFonts.poppins(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF0F172A),
           ),
         ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
@@ -193,7 +247,6 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
     );
   }
 
-  /// ───── TEXT FIELD ─────
   Widget _inputField({
     required TextEditingController controller,
     required String hint,
@@ -202,41 +255,17 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
     return TextField(
       controller: controller,
       maxLines: maxLines,
-      cursorColor: const Color(0xFF2563EB),
-      style: GoogleFonts.poppins(
-        fontSize: 14,
-        color: const Color(0xFF0F172A),
-      ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GoogleFonts.poppins(
-          fontSize: 13,
-          color: const Color(0xFF94A3B8),
-        ),
         border: InputBorder.none,
       ),
     );
   }
 
   void _toast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFF0D9488),
-        behavior: SnackBarBehavior.floating,
-        content: Center(
-          child: Text(
-            msg,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold, // ✅ bold
-            ),
-          ),
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
   }
-
 
   @override
   void dispose() {
@@ -245,5 +274,3 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
     super.dispose();
   }
 }
-
-

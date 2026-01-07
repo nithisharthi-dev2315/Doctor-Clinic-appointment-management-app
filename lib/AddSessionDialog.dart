@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
@@ -10,6 +11,12 @@ import 'package:intl/intl.dart';
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
@@ -30,8 +37,7 @@ class ScheduleSessionDialog extends StatefulWidget {
   });
 
   @override
-  State<ScheduleSessionDialog> createState() =>
-      _ScheduleSessionDialogState();
+  State<ScheduleSessionDialog> createState() => _ScheduleSessionDialogState();
 }
 
 class _ScheduleSessionDialogState extends State<ScheduleSessionDialog> {
@@ -39,6 +45,7 @@ class _ScheduleSessionDialogState extends State<ScheduleSessionDialog> {
   bool loading = false;
 
   int intervalDays = 1;
+
   DateTime? baseDate;
   TimeOfDay? baseTime;
 
@@ -54,13 +61,9 @@ class _ScheduleSessionDialogState extends State<ScheduleSessionDialog> {
   @override
   void initState() {
     super.initState();
-    sessionDates =
-    List<DateTime?>.filled(widget.sessionsCount, null);
-    sessionTimes =
-    List<TimeOfDay?>.filled(widget.sessionsCount, null);
+    sessionDates = List<DateTime?>.filled(widget.sessionsCount, null);
+    sessionTimes = List<TimeOfDay?>.filled(widget.sessionsCount, null);
   }
-
-  // ───────────────── FORMATTERS ─────────────────
 
   String _dateText(DateTime? d) =>
       d == null ? "Select date" : DateFormat("dd MMM yyyy").format(d);
@@ -68,29 +71,23 @@ class _ScheduleSessionDialogState extends State<ScheduleSessionDialog> {
   String _uiTime12(TimeOfDay? t) {
     if (t == null) return "Select time";
     final now = DateTime.now();
-    return DateFormat("hh:mm a").format(
-      DateTime(now.year, now.month, now.day, t.hour, t.minute),
-    );
+    final dt = DateTime(now.year, now.month, now.day, t.hour, t.minute);
+    return DateFormat("hh:mm a").format(dt);
   }
 
   String _apiTime24(TimeOfDay t) =>
       "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
 
-  String _apiDate(DateTime d) =>
-      DateFormat("yyyy-MM-dd").format(d);
-
-  // ───────────────── SESSION BUILD ─────────────────
+  String _apiDate(DateTime d) => DateFormat("yyyy-MM-dd").format(d);
 
   List<Map<String, dynamic>> _buildSessions() {
     final List<Map<String, dynamic>> list = [];
     for (int i = 0; i < widget.sessionsCount; i++) {
-      final date = sessionDates[i];
-      final time = sessionTimes[i];
-      if (date == null || time == null) continue;
+      if (sessionDates[i] == null || sessionTimes[i] == null) continue;
       list.add({
         "index": i + 1,
-        "date": _apiDate(date),
-        "time": _apiTime24(time),
+        "date": _apiDate(sessionDates[i]!),
+        "time": _apiTime24(sessionTimes[i]!),
       });
     }
     return list;
@@ -102,14 +99,11 @@ class _ScheduleSessionDialogState extends State<ScheduleSessionDialog> {
       return;
     }
     for (int i = 0; i < widget.sessionsCount; i++) {
-      sessionDates[i] =
-          baseDate!.add(Duration(days: i * intervalDays));
+      sessionDates[i] = baseDate!.add(Duration(days: i * intervalDays));
       sessionTimes[i] = baseTime;
     }
     setState(() {});
   }
-
-  // ───────────────── SAVE API ─────────────────
 
   Future<void> _saveSessions() async {
     final sessions = _buildSessions();
@@ -129,6 +123,19 @@ class _ScheduleSessionDialogState extends State<ScheduleSessionDialog> {
     };
 
     try {
+      /// 🔹 PRINT REQUEST DETAILS
+      debugPrint("📤 API URL: $_createSessionUrl");
+      debugPrint("📤 REQUEST HEADERS:");
+      debugPrint(
+        const JsonEncoder.withIndent('  ').convert({
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        }),
+      );
+
+      debugPrint("📤 REQUEST BODY:");
+      debugPrint(const JsonEncoder.withIndent('  ').convert(body));
+
       final response = await http.post(
         Uri.parse(_createSessionUrl),
         headers: const {
@@ -138,192 +145,226 @@ class _ScheduleSessionDialogState extends State<ScheduleSessionDialog> {
         body: jsonEncode(body),
       );
 
+      /// 🔹 PRINT RESPONSE DETAILS
+      debugPrint("📥 STATUS CODE: ${response.statusCode}");
+      debugPrint("📥 RAW RESPONSE BODY:");
+      debugPrint(response.body);
+
+      /// 🔹 PARSE RESPONSE
       final data = jsonDecode(response.body);
 
+      /// 🔹 PRINT PARSED RESPONSE (PRETTY)
+      debugPrint("📥 PARSED RESPONSE:");
+      debugPrint(const JsonEncoder.withIndent('  ').convert(data));
+
       if (response.statusCode == 200 && data["success"] == true) {
-        _toast("Sessions scheduled successfully");
+        if (!mounted) return;
+
         Navigator.pop(context, true);
+
+        Future.microtask(() {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(
+            content: Text(
+              data["message"] ?? "Sessions scheduled successfully",
+            ),
+          ));
+        });
       } else {
-        _toast(data["message"] ?? "Failed to schedule");
+        _toast(data["message"] ?? "Failed to schedule sessions");
       }
-    } catch (_) {
+    } catch (e, stack) {
+      /// 🔹 PRINT FULL ERROR
+      debugPrint("❌ API ERROR: $e");
+      debugPrint("❌ STACK TRACE: $stack");
       _toast("Server error. Please try again.");
     } finally {
       if (mounted) setState(() => loading = false);
     }
   }
 
-  // ───────────────── UI ─────────────────
+
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white, // ✅ pure white background
-      insetPadding: const EdgeInsets.all(14),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+      backgroundColor: Colors.white,
+
+      /// 🔥 WIDER DIALOG
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: 8, // 👈 smaller = wider
+        vertical: 16,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
 
-            /// HEADER
-            Row(
-              children: [
-                const Icon(Icons.calendar_month,
-                    color: Color(0xFF2563EB)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Schedule Sessions",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        widget.customerName,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                )
-              ],
-            ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
 
-            const SizedBox(height: 14),
-
-            /// AUTO APPLY
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: autoApply,
-              onChanged: (v) => setState(() => autoApply = v),
-              title: const Text(
-                "Auto apply from Session 1",
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: const Text("Interval based scheduling"),
-            ),
-
-            if (autoApply)
+      child: SizedBox(
+        width: double.infinity, // 🔥 FULL WIDTH
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              /// HEADER
               Row(
                 children: [
-                  const Text("Interval (days):"),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 64,
-                    child: TextField(
-                      controller: intervalController,
-                      keyboardType: TextInputType.number,
-                      onChanged: (v) =>
-                      intervalDays = int.tryParse(v) ?? 1,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 8),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Schedule Sessions",
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0F172A),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.customerName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
 
-            const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
-            /// SESSION LIST
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: widget.sessionsCount,
-                itemBuilder: (_, i) => _sessionCard(i),
+              SwitchListTile(
+                value: autoApply,
+                contentPadding: EdgeInsets.zero,
+                activeColor: const Color(0xFF2563EB),
+                title: const Text(
+                  "Auto apply from Session 1",
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: const Text("Interval based scheduling"),
+                onChanged: (v) => setState(() => autoApply = v),
               ),
-            ),
 
-            const SizedBox(height: 16),
-
-            /// ACTION BUTTONS
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding:
-                      const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+              if (autoApply)
+                Row(
+                  children: [
+                    const Text("Interval (days)"),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 70,
+                      child: TextField(
+                        controller: intervalController,
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) =>
+                        intervalDays = int.tryParse(v) ?? 1,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                       ),
                     ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      "Cancel",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF334155),
+                  ],
+                ),
+
+              const SizedBox(height: 14),
+
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: widget.sessionsCount,
+                  itemBuilder: (_, i) => _sessionCard(i),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              /// ACTION BUTTONS
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF475569), // old text color
+                        side: const BorderSide(
+                          color: Color(0xFFE5E7EB), // old border color
+                          width: 1,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        "Cancel",
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: loading ? null : _saveSessions,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
-                      padding:
-                      const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB), // 🔥 OLD BLUE
+                        foregroundColor: Colors.white,            // WHITE TEXT
+                        elevation: 0,                             // OLD FLAT STYLE
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                    ),
-                    child: loading
-                        ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                        : const Text(
-                      "Save",
-                      style: TextStyle(
-                        color: Colors.white, // ✅ white text
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
+                      onPressed: loading ? null : _saveSessions,
+                      child: loading
+                          ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                          : Text(
+                        "Save",
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            )
-          ],
+
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-
   Widget _sessionCard(int index) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
@@ -331,90 +372,115 @@ class _ScheduleSessionDialogState extends State<ScheduleSessionDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text("Session ${index + 1}",
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
-                child: InkWell(
+                child: _pickerBox(
+                  text: _dateText(sessionDates[index]),
+                  icon: Icons.calendar_today,
                   onTap: () async {
                     final d = await showDatePicker(
                       context: context,
                       initialDate: DateTime.now(),
                       firstDate: DateTime.now(),
-                      lastDate: DateTime.now()
-                          .add(const Duration(days: 365)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: const ColorScheme.light(
+                              primary: Colors.blue,      // header & selected date
+                              onPrimary: Colors.white,   // header text
+                              surface: Colors.white,     // dialog background
+                              onSurface: Colors.black,   // calendar text
+                            ),
+                            dialogBackgroundColor: Colors.white,
+                          ),
+                          child: child!,
+                        );
+                      },
                     );
                     if (d != null) {
                       if (index == 0) baseDate = d;
                       sessionDates[index] = d;
-                      if (autoApply && index == 0)
-                        _applyToAll();
+                      if (autoApply && index == 0) _applyToAll();
                       setState(() {});
                     }
                   },
-                  child: _inputBox(
-                      _dateText(sessionDates[index]),
-                      Icons.calendar_today),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
-                child: InkWell(
+                child: _pickerBox(
+                  text: _uiTime12(sessionTimes[index]),
+                  icon: Icons.access_time,
                   onTap: () async {
                     final t = await showTimePicker(
                       context: context,
                       initialTime: TimeOfDay.now(),
-                      builder: (context, child) =>
-                          MediaQuery(
-                            data: MediaQuery.of(context)
-                                .copyWith(
-                                alwaysUse24HourFormat:
-                                false),
-                            child: child!,
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: const ColorScheme.light(
+                              primary: Colors.blue,      // clock hand & OK button
+                              onPrimary: Colors.white,
+                              surface: Colors.white,     // dialog background
+                              onSurface: Colors.black,
+                            ),
+                            dialogBackgroundColor: Colors.white,
                           ),
+                          child: child!,
+                        );
+                      },
                     );
+
                     if (t != null) {
                       if (index == 0) baseTime = t;
                       sessionTimes[index] = t;
-                      if (autoApply && index == 0)
-                        _applyToAll();
+                      if (autoApply && index == 0) _applyToAll();
                       setState(() {});
                     }
                   },
-                  child: _inputBox(
-                      _uiTime12(sessionTimes[index]),
-                      Icons.access_time),
                 ),
               ),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget _inputBox(String text, IconData icon) {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Expanded(child: Text(text)),
-          Icon(icon, size: 16, color: Colors.grey),
-        ],
+  Widget _pickerBox({
+    required String text,
+    required IconData icon,
+    required VoidCallback onTap,
+  })
+  {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Expanded(child: Text(text)),
+            Icon(icon, size: 16, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }
 
   void _toast(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(msg)));
   }
+
 }
+

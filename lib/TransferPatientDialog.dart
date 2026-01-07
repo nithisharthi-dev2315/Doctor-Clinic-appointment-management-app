@@ -335,76 +335,87 @@ class _TransferPatientDialogState extends State<TransferPatientDialog> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white, // ✅ FORCE WHITE
       shape: const RoundedRectangleBorder(
-        borderRadius:
-        BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20),
+        ),
       ),
       builder: (_) {
-        return Column(
-          children: [
-            const SizedBox(height: 10),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[400],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              "Select Clinic (${filteredClinics.length})",
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
+        return SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
 
-            Expanded(
-              child: filteredClinics.isEmpty
-                  ? const Center(
-                child: Text(
-                  "No clinics found",
-                  style:
-                  TextStyle(color: Colors.grey),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
                 ),
-              )
-                  : ListView.separated(
-                itemCount: filteredClinics.length,
-                separatorBuilder: (_, __) =>
-                const Divider(height: 1),
-                itemBuilder: (_, i) {
-                  final c = filteredClinics[i];
-                  return ListTile(
-                    title: Text(
-                      c['name'] ?? '',
-                      style: const TextStyle(
-                          fontWeight:
-                          FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      c['address'] ?? '',
-                      maxLines: 2,
-                      overflow:
-                      TextOverflow.ellipsis,
-                    ),
-                    onTap: () {
-                      setState(() {
-                        selectedClinicId =
-                        c['id'];
-                        selectedClinicName =
-                        c['name'];
-                      });
-                      Navigator.pop(context);
-                    },
-                  );
-                },
               ),
-            ),
-          ],
+
+              const SizedBox(height: 12),
+
+              Text(
+                "Select Clinic (${filteredClinics.length})",
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black, // ✅ visible text
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Expanded(
+                child: filteredClinics.isEmpty
+                    ? const Center(
+                  child: Text(
+                    "No clinics found",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+                    : ListView.separated(
+                  itemCount: filteredClinics.length,
+                  separatorBuilder: (_, __) =>
+                  const Divider(height: 1),
+                  itemBuilder: (_, i) {
+                    final c = filteredClinics[i];
+                    return ListTile(
+                      tileColor: Colors.white, // ✅ ensure white rows
+                      title: Text(
+                        c['name'] ?? '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      subtitle: Text(
+                        c['address'] ?? '',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                      onTap: () {
+                        setState(() {
+                          selectedClinicId = c['id'];
+                          selectedClinicName = c['name'];
+                        });
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
+
 
   // ───────────────────────── HELPERS ─────────────────────────
 
@@ -434,7 +445,21 @@ class _TransferPatientDialogState extends State<TransferPatientDialog> {
   }
 
   void _toast(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF0D9488),
+        behavior: SnackBarBehavior.floating,
+        content: Center(
+          child: Text(
+            msg,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold, // ✅ bold
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
