@@ -114,20 +114,33 @@ import '../utils/ApiConstants.dart';
       "assignedBy": assignedBy,
     };
 
+    debugPrint("📤 REQUEST URL: $url");
+    debugPrint("📤 REQUEST BODY: ${jsonEncode(body)}");
+
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
     );
 
-    if (response.statusCode == 200 ||
-        response.statusCode == 201) {
+    /// 🔽 PRINT FULL RESPONSE
+    debugPrint("📥 STATUS CODE: ${response.statusCode}");
+    debugPrint("📥 HEADERS: ${response.headers}");
+    debugPrint("📥 RAW BODY: ${response.body}");
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
       final data = jsonDecode(response.body);
+
+      debugPrint("✅ PARSED JSON: $data");
+      debugPrint("✅ SUCCESS FLAG: ${data["success"]}");
+
       return data["success"] == true;
     } else {
+      debugPrint("❌ ERROR RESPONSE BODY: ${response.body}");
       throw Exception("Failed to add session");
     }
   }
+
   static const String _baseUrl =
       "https://srv1090011.hstgr.cloud/api/payments";
   static Future<CreatePaymentLinkResponse> createPaymentLink(
@@ -152,41 +165,60 @@ import '../utils/ApiConstants.dart';
   static const getdocurl =
       "https://srv1090011.hstgr.cloud/api/add_sessions";
 
-  static Future<List<DoctorPayment>> getDoctorPayments({
+  static Future<DoctorPaymentResponse> getDoctorPayments({
     required String doctorId,
     required String username,
-  }) async
-  {
-
+  }) async {
     final url = Uri.parse("$getdocurl/fetch_paidsessions_simple");
+
+    final requestBody = {
+      "doctorId": doctorId,
+      "username": username,
+    };
+
+    debugPrint("📤 REQUEST URL: $url");
+    debugPrint("📤 REQUEST BODY: ${jsonEncode(requestBody)}");
 
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "doctorId": doctorId,
-        "username": username,
-      }),
+      body: jsonEncode(requestBody),
     );
 
-    debugPrint("📥 Status Code: ${response.statusCode}");
-    debugPrint("📥 Response Body: ${response.body}");
+    debugPrint("📥 STATUS CODE: ${response.statusCode}");
+    debugPrint("📥 RAW RESPONSE BODY:");
+    debugPrint(response.body);
 
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
 
-      /// ✅ SAFE EXTRACTION
-      final List list = decoded['sessions'] ?? [];
+      debugPrint("🧩 FULL JSON STRUCTURE ↓↓↓");
+      printJson(decoded);
 
-      /// ✅ SAFE MAPPING
-      return list
-          .map((e) => DoctorPayment.fromJson(e))
-          .toList();
+      /// ✅ RETURN SINGLE RESPONSE OBJECT
+      return DoctorPaymentResponse.fromJson(decoded);
     } else {
+      debugPrint("❌ ERROR BODY: ${response.body}");
       throw Exception("Failed to load payments");
     }
   }
 
+
+  static printJson(dynamic data, [String indent = ""]) {
+    if (data is Map) {
+      data.forEach((key, value) {
+        debugPrint("$indent🔑 $key : ${value.runtimeType}");
+        printJson(value, "$indent  ");
+      });
+    } else if (data is List) {
+      for (int i = 0; i < data.length; i++) {
+        debugPrint("$indent📦 [$i] : ${data[i].runtimeType}");
+        printJson(data[i], "$indent  ");
+      }
+    } else {
+      debugPrint("$indent➡ $data");
+    }
+  }
 
 
   static const String _baseUrlpayhistory =

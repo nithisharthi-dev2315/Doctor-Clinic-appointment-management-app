@@ -8,8 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'Apiservice/appointment_api_service.dart';
 import 'SessionDetailsDialog.dart';
-import 'SessionDetailsPage.dart';
-import 'SessionSchudleDetailPage.dart';
 import 'model/DoctorPayment.dart';
 
 enum DateFilterType { today, upcoming, custom }
@@ -50,12 +48,14 @@ class SessionsPageState extends State<SessionsPage> {
     setState(() => _loading = true);
 
     try {
-      final data = await AppointmentApiService.getDoctorPayments(
+      final response = await AppointmentApiService.getDoctorPayments(
         doctorId: widget.doctorId,
         username: widget.username,
       );
 
-      _allSessions = data;
+      /// ✅ CORRECT ASSIGNMENT
+      _allSessions = response.sessions;
+
       _applyFilter();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

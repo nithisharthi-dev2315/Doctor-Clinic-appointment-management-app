@@ -64,16 +64,20 @@ class _EnquiryDialogState extends State<EnquiryDialog> {
       );
 
       /// 🔁 RELOAD FROM SERVER
-      final payments = await AppointmentApiService.getDoctorPayments(
+      final response = await AppointmentApiService.getDoctorPayments(
         doctorId: widget.updatedBy,
         username: widget.username,
       );
 
-      /// 🔥 MATCH BY PAYMENT ID (NOT payments.first)
-      final updatedPayment = payments.firstWhere(
+      /// ✅ ALWAYS CHECK sessions
+      if (response.sessions.isEmpty) return;
+
+      /// 🔥 MATCH BY PAYMENT ID (SAFE)
+      final updatedPayment = response.sessions.firstWhere(
             (p) => p.id == widget.addSessionId,
-        orElse: () => payments.first,
+        orElse: () => response.sessions.first,
       );
+
 
       Navigator.pop(
         context,
@@ -90,14 +94,17 @@ class _EnquiryDialogState extends State<EnquiryDialog> {
   // ================= RELOAD =================
   Future<void> _reloadDoctorPayments() async {
     try {
-      final payments = await AppointmentApiService.getDoctorPayments(
+
+
+      final response = await AppointmentApiService.getDoctorPayments(
         doctorId: widget.updatedBy,
         username: widget.username,
       );
 
-      if (!mounted || payments.isEmpty) return;
+      if (!mounted || response.sessions.isEmpty) return;
 
-      final updatedSessions = payments.first.sessions;
+      final updatedSessions = response.sessions.first.sessions;
+
 
       if (currentSessionIndex >= updatedSessions.length) return;
 

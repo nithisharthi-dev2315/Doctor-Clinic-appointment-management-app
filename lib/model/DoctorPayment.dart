@@ -1,4 +1,25 @@
 // ======================= DOCTOR PAYMENT =======================
+class DoctorPaymentResponse {
+  final bool success;
+  final int count;
+  final List<DoctorPayment> sessions;
+
+  DoctorPaymentResponse({
+    required this.success,
+    required this.count,
+    required this.sessions,
+  });
+
+  factory DoctorPaymentResponse.fromJson(Map<String, dynamic> json) {
+    return DoctorPaymentResponse(
+      success: json['success'] ?? false,
+      count: json['count'] ?? 0,
+      sessions: (json['sessions'] as List? ?? [])
+          .map((e) => DoctorPayment.fromJson(e))
+          .toList(),
+    );
+  }
+}
 
 class DoctorPayment {
   final String id;

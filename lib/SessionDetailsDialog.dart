@@ -16,7 +16,7 @@ import 'model/DoctorPayment.dart';
 class SessionDetailsDialog extends StatefulWidget {
   final DoctorPayment payment;
   final String doctorId;
-  final String username; // ✅ ADD
+  final String username;
 
 
   const SessionDetailsDialog({
@@ -58,7 +58,7 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
   @override
   void initState() {
     super.initState();
-    payment = widget.payment; // 🔥 LOCAL STATE COPY
+    payment = widget.payment;
     enquiryExpanded =
     List<bool>.filled(payment.sessions.length, false);
     loadSessions();
@@ -89,7 +89,10 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
         treatment: controller.text.trim(),
       );
 
-      /// ✅ TEMP local cache (instant UI)
+
+      print('res==========${res}');
+
+
       setState(() {
         roomCache[index] = _RoomCache(
           roomName: res.session.roomName,
@@ -119,15 +122,23 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
     setState(() => _loading = true);
 
     try {
-      final data = await AppointmentApiService.getDoctorPayments(
+      final response = await AppointmentApiService.getDoctorPayments(
         doctorId: widget.doctorId,
         username: widget.username,
       );
 
-      if (data.isEmpty) return;
+      /// ✅ CORRECT EMPTY CHECK
+      if (response.sessions.isEmpty) return;
+
+      /// ✅ Pick correct payment (best: match by id)
+      final DoctorPayment selectedPayment =
+      response.sessions.firstWhere(
+            (p) => p.id == widget.payment.id,
+        orElse: () => response.sessions.first,
+      );
 
       setState(() {
-        payment = data.first; // ✅ CORRECT
+        payment = selectedPayment;
         enquiryExpanded =
         List<bool>.filled(payment.sessions.length, false);
       });
@@ -147,15 +158,23 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
 
   Future<void> _reloadDoctorPayments(int expandedIndex) async {
     try {
-      final data = await AppointmentApiService.getDoctorPayments(
+      final response = await AppointmentApiService.getDoctorPayments(
         doctorId: widget.doctorId,
         username: widget.username,
       );
 
+      /// 🔐 SAFETY CHECK
+      if (response.sessions.isEmpty) return;
+
+      /// 👉 pick the correct DoctorPayment
+      /// If you already know which payment this screen belongs to,
+      /// usually it is index 0 OR matched by id
+      final DoctorPayment payment = response.sessions.first;
+
       setState(() {
         widget.payment.sessions
           ..clear()
-          ..addAll(data.first.sessions);
+          ..addAll(payment.sessions);
 
         enquiryExpanded =
         List<bool>.filled(widget.payment.sessions.length, false);
@@ -166,10 +185,10 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
 
         /// ✅ SAFE DEBUG
         debugPrint(
-          "UPDATED CC: ${data.first.sessions[expandedIndex].chiefComplaints}",
+          "UPDATED CC: ${payment.sessions[expandedIndex].chiefComplaints}",
         );
         debugPrint(
-          "UPDATED NOTES: ${data.first.sessions[expandedIndex].enquiryNotes}",
+          "UPDATED NOTES: ${payment.sessions[expandedIndex].enquiryNotes}",
         );
       });
     } catch (e) {
@@ -575,12 +594,10 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
 
                                   if (updatedSession != null && mounted) {
                                     setState(() {
-                                      /// 🔥 IMMUTABLE SESSION LIST
                                       final updatedSessions =
                                       List<SessionSlot>.from(payment.sessions);
                                       updatedSessions[index] = updatedSession;
 
-                                      /// 🔥 IMMUTABLE PAYMENT OBJECT
                                       payment = DoctorPayment(
                                         id: payment.id,
                                         appointmentId: payment.appointmentId,
