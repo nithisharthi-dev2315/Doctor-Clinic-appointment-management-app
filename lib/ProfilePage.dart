@@ -121,7 +121,7 @@ class ProfilePage extends StatelessWidget {
                     "Logout",
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w500,
-                      color: Colors.white,
+                      color: Color(0xFFDC2626)
                     ),
                   ),
 
@@ -216,7 +216,7 @@ class ProfilePage extends StatelessWidget {
                             ),
                             onPressed: () =>
                                 Navigator.pop(context, true),
-                            child: const Text("Logout"),
+                            child: const Text("Logout",style: TextStyle(color: Colors.white),),
                           ),
                         ),
                       ],

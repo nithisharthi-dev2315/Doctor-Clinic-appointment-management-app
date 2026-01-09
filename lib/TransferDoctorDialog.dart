@@ -9,6 +9,7 @@ import 'Apiservice/appointment_api_service.dart';
 
 import 'package:flutter/material.dart';
 import 'Apiservice/appointment_api_service.dart';
+import 'model/AvailableDoctor.dart';
 class TransferDoctorDialog extends StatefulWidget {
   final String appointmentId;
   final String patientName;
@@ -25,7 +26,8 @@ class TransferDoctorDialog extends StatefulWidget {
 }
 
 class _TransferDoctorDialogState extends State<TransferDoctorDialog> {
-  List<Map<String, String>> doctors = [];
+  List<AvailableDoctor> doctors = [];
+
   String? selectedDoctorId;
 
   final TextEditingController reasonCtrl = TextEditingController();
@@ -156,8 +158,8 @@ class _TransferDoctorDialogState extends State<TransferDoctorDialog> {
               decoration: InputDecoration(
                 hintText: "Choose doctor",
                 isDense: true,
-                filled: true,                    // ✅ REQUIRED
-                fillColor: Colors.white,         // ✅ FIELD WHITE
+                filled: true,
+                fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 12,
@@ -173,24 +175,28 @@ class _TransferDoctorDialogState extends State<TransferDoctorDialog> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              dropdownColor: Colors.white,       // ✅ POPUP WHITE
-              items: doctors.map((d) {
+
+              dropdownColor: Colors.white,
+
+              items: doctors.map((AvailableDoctor d) {
                 return DropdownMenuItem<String>(
-                  value: d['id'],
-                  child: Container(
-                    color: Colors.white,          // ✅ ITEM WHITE
-                    child: Text(
-                      d['name'] ?? "",
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.black),
-                    ),
+                  value: d.id, // ✅ doctor ID
+                  child: Text(
+                    d.name, // ✅ doctor name
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.black),
                   ),
                 );
               }).toList(),
 
-              onChanged: (v) => setState(() => selectedDoctorId = v),
+              onChanged: (v) {
+                setState(() {
+                  selectedDoctorId = v;
+                });
+              },
             ),
+
 
 
         const SizedBox(height: 14),

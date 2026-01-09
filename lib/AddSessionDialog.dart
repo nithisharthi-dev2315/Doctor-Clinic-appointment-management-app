@@ -163,12 +163,20 @@ class _ScheduleSessionDialogState extends State<ScheduleSessionDialog> {
         Navigator.pop(context, true);
 
         Future.microtask(() {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(
-            content: Text(
-              data["message"] ?? "Sessions scheduled successfully",
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF0D9488), // 🔥 teal / green
+              behavior: SnackBarBehavior.floating,
+              content: Text(
+                data["message"] ?? "Sessions scheduled successfully",
+                style: const TextStyle(
+                  color: Colors.white, // ✅ white text
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-          ));
+          );
+
         });
       } else {
         _toast(data["message"] ?? "Failed to schedule sessions");
@@ -478,9 +486,27 @@ class _ScheduleSessionDialogState extends State<ScheduleSessionDialog> {
 
   void _toast(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF0D9488), // 🔥 teal
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        content: Text(
+          msg,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white, // ✅ white text
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
   }
+
 
 }
 

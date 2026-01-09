@@ -48,6 +48,10 @@ dependencies:
   fluttertoast: ^8.2.4
 
 
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"
 
 
 

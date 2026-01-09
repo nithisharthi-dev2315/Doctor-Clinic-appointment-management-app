@@ -11,6 +11,7 @@ import 'Apiservice/appointment_api_service.dart';
 import 'CommonWebViewPage.dart';
 import 'EnquryDilog.dart';
 import 'api/EditSessionsDialog.dart';
+import 'model/AvailableDoctor.dart';
 import 'model/DoctorPayment.dart';
 
 class SessionDetailsDialog extends StatefulWidget {
@@ -33,8 +34,9 @@ class SessionDetailsDialog extends StatefulWidget {
 class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
   late List<bool> enquiryExpanded;
 
-  List<Map<String, String>> doctors = [];
-  final Map<int, Map<String, String>> selectedDoctors = {};
+  List<AvailableDoctor> doctors = [];
+  Map<int, AvailableDoctor> selectedDoctors = {};
+
 
   bool loadingDoctors = false;
 
@@ -71,13 +73,20 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
     if (creatingRoom) return;
 
     final controller = treatmentControllers[index];
+    final AvailableDoctor? selectedDoctor = selectedDoctors[index];
 
-    if (controller == null || controller.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter treatment")),
+    // 🔴 WARNING TOAST
+    if (selectedDoctor == null) {
+      showSnackBarStyleDialog(
+        "Please select a doctor",
+        type: "warning",
       );
       return;
     }
+
+    final String handledDoctorId = selectedDoctor.id;
+    final String handledByName = selectedDoctor.name;
+    final String treatmentText = controller?.text.trim() ?? "";
 
     setState(() => creatingRoom = true);
 
@@ -85,39 +94,148 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
       final res = await AppointmentApiService.createSessionRoom(
         sessionObjectId: widget.payment.id,
         sessionIndex: index + 1,
-        doctorId: widget.doctorId,
-        treatment: controller.text.trim(),
+        handledDoctorId: handledDoctorId,
+        treatment: treatmentText,
       );
 
-
-      print('res==========${res}');
-
+      debugPrint("🟢 CREATE ROOM RESPONSE:");
+      debugPrint(res.toString());
 
       setState(() {
         roomCache[index] = _RoomCache(
           roomName: res.session.roomName,
           patientLink: res.session.patientLink,
           doctorLink: res.session.doctorLink,
-          handledBy: res.session.handledBy,
-          treatment: res.session.treatment,
+          handledBy: handledByName,
+          treatment: treatmentText,
         );
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Room created successfully")),
+      // 🟢 SUCCESS TOAST
+      showSnackBarStyleDialog(
+        "Room created successfully",
+        type: "success",
       );
 
-      /// ✅ ONLY PLACE to reload
       await _reloadDoctorPayments(index);
 
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Create room failed")),
+      debugPrint("❌ CREATE ROOM ERROR: $e");
+
+      // 🔴 ERROR TOAST
+      showSnackBarStyleDialog(
+        "Failed to create consultation room. Please try again.",
+        type: "error",
       );
     } finally {
       if (mounted) setState(() => creatingRoom = false);
     }
   }
+
+
+
+
+  void showSnackBarStyleDialog(
+      String message, {
+        String type = "success", // success | warning | error
+        Duration duration = const Duration(seconds: 2),
+      }) {
+    if (!mounted) return;
+
+    Color bgColor;
+    IconData icon;
+
+    switch (type) {
+      case "warning":
+        bgColor = const Color(0xFFF59E0B); // amber
+        icon = Icons.warning_amber_rounded;
+        break;
+
+      case "error":
+        bgColor = const Color(0xFFDC2626); // red
+        icon = Icons.error_outline;
+        break;
+
+      default: // success
+        bgColor = const Color(0xFF16A34A); // green
+        icon = Icons.check_circle;
+    }
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "SnackBarStyle",
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (_, __, ___) {
+        Future.delayed(duration, () {
+          if (Navigator.of(context, rootNavigator: true).canPop()) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
+        });
+
+        return SafeArea(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, color: Colors.white, size: 20),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          message,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (_, animation, __, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.12),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+
+
   Future<void> loadSessions() async {
     setState(() => _loading = true);
 
@@ -127,21 +245,31 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
         username: widget.username,
       );
 
-      /// ✅ CORRECT EMPTY CHECK
       if (response.sessions.isEmpty) return;
 
-      /// ✅ Pick correct payment (best: match by id)
+      /// ✅ Pick correct payment
       final DoctorPayment selectedPayment =
       response.sessions.firstWhere(
             (p) => p.id == widget.payment.id,
         orElse: () => response.sessions.first,
       );
 
+      for (final session in selectedPayment.sessions) {
+        debugPrint("🟢 INITIAL FETCH RESULT");
+        debugPrint("📅 Session Index: ${session.index}");
+        debugPrint("🧑 Handled By (API): ${session.sessionHandledDisplay}");
+        debugPrint("💊 Treatment (API): ${session.treatment}");
+        debugPrint("💊 DocterId: ${widget.doctorId}");
+        debugPrint("💊 Docternamer===== ${widget.username}");
+        debugPrint("------------------------------------------------");
+      }
+
       setState(() {
         payment = selectedPayment;
         enquiryExpanded =
         List<bool>.filled(payment.sessions.length, false);
       });
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -156,6 +284,7 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
     }
   }
 
+
   Future<void> _reloadDoctorPayments(int expandedIndex) async {
     try {
       final response = await AppointmentApiService.getDoctorPayments(
@@ -163,12 +292,8 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
         username: widget.username,
       );
 
-      /// 🔐 SAFETY CHECK
       if (response.sessions.isEmpty) return;
 
-      /// 👉 pick the correct DoctorPayment
-      /// If you already know which payment this screen belongs to,
-      /// usually it is index 0 OR matched by id
       final DoctorPayment payment = response.sessions.first;
 
       setState(() {
@@ -182,19 +307,23 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
         if (expandedIndex < enquiryExpanded.length) {
           enquiryExpanded[expandedIndex] = true;
         }
-
-        /// ✅ SAFE DEBUG
-        debugPrint(
-          "UPDATED CC: ${payment.sessions[expandedIndex].chiefComplaints}",
-        );
-        debugPrint(
-          "UPDATED NOTES: ${payment.sessions[expandedIndex].enquiryNotes}",
-        );
       });
+
+      // ================== 🔥 PRINT CURRENT VALUES 🔥 ==================
+
+      final session = payment.sessions[expandedIndex];
+
+      debugPrint("🟢 CREATE ROOM → FETCH RESULT");
+      debugPrint("🧑 Handled By (API): ${session.sessionHandledDisplay}");
+      debugPrint("💊 Treatment (API): ${session.treatment}");
+      debugPrint("📅 Session Index: ${session.index}");
+      debugPrint("------------------------------------------------");
+
     } catch (e) {
       debugPrint("Reload failed: $e");
     }
   }
+
 
 
 
@@ -781,26 +910,26 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
 
   // ================= ENQUIRY =================
   Widget _enquirySection(int index) {
-    final session = payment.sessions[index]; // ✅ CORRECT
+    final session = payment.sessions[index];
 
-
-    /// ✅ INIT session-wise controller
+    /// ✅ SESSION-WISE CONTROLLER (AUTO FILLED)
     treatmentControllers.putIfAbsent(
       index,
           () => TextEditingController(text: session.treatment ?? ""),
     );
 
-    /// ✅ INIT session-wise doctor
+    /// ✅ SESSION-WISE DOCTOR AUTO SELECT
     if (!selectedDoctors.containsKey(index) &&
         session.sessionHandled != null &&
         doctors.isNotEmpty) {
       selectedDoctors[index] = doctors.firstWhere(
             (d) =>
-        d['id'] == session.sessionHandled ||
-            d['name'] == session.sessionHandledDisplay,
-        orElse: () => <String, String>{},
+        d.id == session.sessionHandled ||
+            d.name == session.sessionHandledDisplay,
+        orElse: () => doctors.first,
       );
     }
+
 
     final controller = treatmentControllers[index]!;
 
@@ -821,7 +950,8 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
 
           _label("Add Treatment (type)"),
           TextField(
-            controller: controller, // 👈 session-wise
+            controller: controller, // ✅ FIXED
+
             decoration: InputDecoration(
               hintText: "e.g. Ortho Rehab / Pain Relief",
               isDense: true,
@@ -941,6 +1071,7 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
             "Treatment",
             cache?.treatment ?? session.treatment ?? "-",
           ),
+
         ],
       ),
     );
@@ -1047,33 +1178,24 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
         child: CircularProgressIndicator(strokeWidth: 2),
       )
           : DropdownButtonHideUnderline(
-        child: DropdownButton<Map<String, String>>(
+        child: DropdownButton<AvailableDoctor>(
           isExpanded: true,
-
-          /// ✅ session-wise value
           value: selectedDoctors[index],
-
-          hint: const Text(
-            "-- select doctor --",
-            style: TextStyle(color: Colors.black54),
-          ),
+          hint: const Text("-- select doctor --"),
           dropdownColor: Colors.white,
-          icon: const Icon(
-            Icons.keyboard_arrow_down,
-            color: Colors.black54,
-          ),
-          items: doctors.map((d) {
-            return DropdownMenuItem<Map<String, String>>(
+          icon: const Icon(Icons.keyboard_arrow_down),
+
+          items: doctors.map((AvailableDoctor d) {
+            return DropdownMenuItem<AvailableDoctor>(
               value: d,
               child: Text(
-                "${d['name']} (${d['mobile']})",
+                "${d.name} (${d.mobile})",
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: Colors.black),
               ),
             );
           }).toList(),
 
-          /// ✅ session-wise update
           onChanged: (val) {
             if (val != null) {
               setState(() {
@@ -1082,7 +1204,8 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
             }
           },
         ),
-      ),
+      )
+
     );
   }
 

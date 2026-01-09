@@ -314,6 +314,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     }
   }
   Widget _concernDropdown() {
+
     return DropdownButtonFormField<ConcernModel>(
       value: selectedConcern,
 
@@ -384,6 +385,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       ),
     );
   }
+  bool isSubmitting = false;
 
 
   @override
@@ -533,24 +535,33 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                   height: 52,
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _onSubmit,
+                    onPressed: isSubmitting ? null : _onSubmit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2563EB),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: const Text(
+                    child: isSubmitting
+                        ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                        : const Text(
                       "Submit Appointment",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white, // ✅ White text
+                        color: Colors.white,
                       ),
                     ),
-
                   ),
                 ),
+
               ],
             ),
           ),
@@ -594,7 +605,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
         SnackBar(
           content: const Text(
             "Please select primary concern",
-            style: TextStyle(color: Colors.black),
+            style: TextStyle(color: Colors.white),
           ),
           backgroundColor: Color(0xFF0D9488),
           behavior: SnackBarBehavior.floating,
@@ -634,7 +645,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
           content: Text(
             " Appointment added successfully",
             style: const TextStyle(
-              color: Colors.black,
+              color: Colors.white,
               fontWeight: FontWeight.w500,
             ),
           ),

@@ -359,7 +359,7 @@ class SessionsPageState extends State<SessionsPage> {
                 builder: (_) => SessionDetailsDialog(
                   payment: item, // ✅ FIXED
                   doctorId: widget.doctorId,
-                  username: item.createdByDoctor.username, // ✅ FIXED
+                  username: item.createdByDoctor.username,
                 ),
               );
             },

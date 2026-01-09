@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+/// ================= CREATE ROOM RESPONSE =================
+
 class CreateRoomResponse {
   final bool success;
   final String message;
@@ -12,16 +16,33 @@ class CreateRoomResponse {
   });
 
   factory CreateRoomResponse.fromJson(Map<String, dynamic> json) {
-    final sessionJson = json['addSession']['sessions'][0];
+    // sessions is a LIST → take latest session
+    final List sessions = json['addSession']?['sessions'] ?? [];
+    final Map<String, dynamic> latestSession =
+    sessions.isNotEmpty ? sessions.last : {};
 
     return CreateRoomResponse(
       success: json['success'] ?? false,
       message: json['message'] ?? '',
       room: Room.fromJson(json['room'] ?? {}),
-      session: Session.fromJson(sessionJson ?? {}),
+      session: Session.fromJson(latestSession),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "success": success,
+      "message": message,
+      "room": room.toJson(),
+      "session": session.toJson(),
+    };
+  }
+
+  @override
+  String toString() => jsonEncode(toJson());
 }
+
+/// ================= ROOM =================
 
 class Room {
   final String? roomName;
@@ -40,11 +61,22 @@ class Room {
     return Room(
       roomName: json['roomName'],
       roomSid: json['roomSid'],
-      patientLink: json['link'],
-      doctorLink: json['doctorLink'], // if available
+      patientLink: json['link'],        // patient link
+      doctorLink: json['doctorLink'],   // if backend provides
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "roomName": roomName,
+      "roomSid": roomSid,
+      "patientLink": patientLink,
+      "doctorLink": doctorLink,
+    };
+  }
 }
+
+/// ================= SESSION =================
 
 class Session {
   final String? roomName;
@@ -73,5 +105,14 @@ class Session {
       treatment: json['treatment'],
     );
   }
-}
 
+  Map<String, dynamic> toJson() {
+    return {
+      "roomName": roomName,
+      "patientLink": patientLink,
+      "doctorLink": doctorLink,
+      "handledBy": handledBy,
+      "treatment": treatment,
+    };
+  }
+}

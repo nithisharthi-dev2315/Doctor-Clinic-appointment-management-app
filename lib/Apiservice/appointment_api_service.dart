@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../SessionUpdateRequest.dart';
 import '../model/AddSessionRequest.dart';
 import '../model/AddSessionResponsee.dart';
+import '../model/AvailableDoctor.dart';
 import '../model/BookSessionPackage.dart';
 import '../model/ConcernModel.dart';
 import '../model/CreatePaymentLinkRequest.dart';
@@ -325,7 +326,7 @@ import '../utils/ApiConstants.dart';
       "https://srv1090011.hstgr.cloud/api";
 
   /// 🔹 GET AVAILABLE DOCTORS
-  static Future<List<Map<String, String>>> fetchAvailableDoctors() async {
+  static Future<List<AvailableDoctor>> fetchAvailableDoctors() async {
     final response = await http.get(
       Uri.parse("$_baseUrltrans/add_sessions/available_doctors"),
       headers: {"Content-Type": "application/json"},
@@ -333,22 +334,16 @@ import '../utils/ApiConstants.dart';
 
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-
-      /// ✅ CORRECT KEY
       final List list = decoded['doctors'] ?? [];
 
-      return list.map<Map<String, String>>((d) {
-        return {
-          "id": d["_id"]?.toString() ?? "",
-          "name": d["username"]?.toString() ?? "",
-          "type": d["type"]?.toString() ?? "",
-          "mobile": d["mobile_no"]?.toString() ?? "",
-        };
-      }).toList();
+      return list
+          .map<AvailableDoctor>((d) => AvailableDoctor.fromJson(d))
+          .toList();
     } else {
       throw Exception("Failed to load doctors");
     }
   }
+
 
 
   /// 🔹 TRANSFER TO DOCTOR
@@ -396,33 +391,71 @@ import '../utils/ApiConstants.dart';
   static Future<CreateRoomResponse> createSessionRoom({
     required String sessionObjectId,
     required int sessionIndex,
-    required String doctorId,
+    required String handledDoctorId,
     required String treatment,
-  }) async
-  {
+  }) async {
     final url = Uri.parse(
       "https://srv1090011.hstgr.cloud/api/add_sessions/"
           "$sessionObjectId/session/$sessionIndex/create_room",
     );
 
+    debugPrint("📤 CREATE ROOM URL:");
+    debugPrint(url.toString());
 
-    print('url===================${url}');
+    final requestBody = {
+      "doctorId": handledDoctorId,
+      "treatmentType": treatment,
+    };
+
+    debugPrint("📤 CREATE ROOM BODY:");
+    jsonEncode(requestBody).split('\n').forEach(debugPrint);
 
     final res = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "doctorAssigned": doctorId,
-        "treatment": treatment,
-      }),
+      body: jsonEncode(requestBody),
     );
 
+    debugPrint("📥 STATUS CODE: ${res.statusCode}");
+
+    /// 🔥 PRINT FULL RAW RESPONSE (NO TRUNCATION)
+    debugPrint("📥 RAW RESPONSE BODY ↓↓↓");
+    jsonDecode(res.body)
+        .toString()
+        .split(',')
+        .forEach(debugPrint);
+
     if (res.statusCode == 200) {
-      return CreateRoomResponse.fromJson(jsonDecode(res.body));
+      /// 🔥 PRETTY PRINT JSON
+      debugPrint("📥 PRETTY RESPONSE JSON ↓↓↓");
+      const encoder = JsonEncoder.withIndent('  ');
+      encoder
+          .convert(jsonDecode(res.body))
+          .split('\n')
+          .forEach(debugPrint);
+
+      final parsed =
+      CreateRoomResponse.fromJson(jsonDecode(res.body));
+
+      debugPrint("🟢 PARSED CREATE ROOM RESPONSE");
+      debugPrint("Success      : ${parsed.success}");
+      debugPrint("Message      : ${parsed.message}");
+      debugPrint("Room Name    : ${parsed.room.roomName}");
+      debugPrint("Room SID     : ${parsed.room.roomSid}");
+      debugPrint("Patient Link : ${parsed.room.patientLink}");
+      debugPrint("Doctor Link  : ${parsed.session.doctorLink}");
+      debugPrint("Handled By   : ${parsed.session.handledBy}");
+      debugPrint("Treatment    : ${parsed.session.treatment}");
+      debugPrint("════════════════════════════════");
+
+      return parsed;
     } else {
+      debugPrint("❌ CREATE ROOM FAILED");
       throw Exception("Create room failed");
     }
   }
+
+
   static const String editsession =
       "https://srv1090011.hstgr.cloud/api/add_sessions";
 
@@ -528,6 +561,12 @@ import '../utils/ApiConstants.dart';
     return response.statusCode == 200 && data["success"] == true;
   }
 
+  void prettyPrintJson(String jsonStr) {
+    const encoder = JsonEncoder.withIndent('  ');
+    final object = jsonDecode(jsonStr);
+    final prettyString = encoder.convert(object);
+    prettyString.split('\n').forEach(debugPrint);
+  }
 
 
   }

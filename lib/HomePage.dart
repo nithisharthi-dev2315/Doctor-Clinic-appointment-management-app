@@ -95,10 +95,14 @@ class _HomePageState extends State<HomePage> {
 
           if (result == true) {
             setState(() {
-              _loadAppointments();
+              _filterType = DateFilterType.upcoming;
+              _appointmentsFuture =
+                  ApiService.getDoctorAppointments(widget.doctorId);
             });
           }
+
         },
+
 
         // ✅ Centered white icon
         child: const Icon(
@@ -395,7 +399,9 @@ class _HomePageState extends State<HomePage> {
           return apptDay == today;
 
         case DateFilterType.upcoming:
-          return apptDay.isAfter(today);
+          return apptDay.isAtSameMomentAs(today) ||
+              apptDay.isAfter(today);
+
 
         case DateFilterType.custom:
           if (_selectedDate == null) return true;
