@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-
 import '../Apiservice/appointment_api_service.dart';
 import '../model/ConcernModel.dart';
 import '../model/appointment_request.dart';
@@ -12,11 +11,13 @@ import '../model/appointment_request.dart';
 class BookAppointmentPage extends StatefulWidget {
   final String doctorId;
   final String doctorUsername;
+  final bool isClinic;
 
   const BookAppointmentPage({
     super.key,
     required this.doctorId,
     required this.doctorUsername,
+    required this.isClinic,
   });
 
   @override
@@ -31,6 +32,10 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   final phoneController = TextEditingController();
   final emailController = TextEditingController();
   final couponController = TextEditingController();
+  final treatmentController = TextEditingController();
+  final notesController  = TextEditingController();
+
+
 
 
   String? gender;
@@ -299,6 +304,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   void initState() {
     super.initState();
     loadConcerns();
+    print('widget.isClinic=========${widget.isClinic}');
   }
 
   Future<void> loadConcerns() async {
@@ -396,13 +402,14 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(
-            CupertinoIcons.back,
-            color: Colors.black,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title:  Text(
+      icon: const Icon(
+      Icons.arrow_back, // ✅ Material icon
+        color: Colors.black,
+      ),
+      onPressed: () => Navigator.pop(context),
+    ),
+
+    title:  Text(
           "Add Patient",
           style: GoogleFonts.poppins(
             color: const Color(0xFF0F172A),
@@ -488,24 +495,34 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                 const SizedBox(height: 16),
 
                 /// LANGUAGE
-                _label("Preferred Language"),
-                _smallDropdown(
-                  value: language,
-                  hint: "Select your preferred language",
-                  items: const ["English", "Tamil", "Hindi"],
-                  validator: (v) =>
-                  v == null ? "Please select your preferred language" : null,
-                  onChanged: (v) => setState(() => language = v),
-                ),
+                if (!widget.isClinic) ...[
+                  _label("Preferred Language"),
+                  _smallDropdown(
+                    value: language,
+                    hint: "Select your preferred language",
+                    items: const ["English", "Tamil", "Hindi"],
+                    validator: (v) =>
+                    v == null ? "Please select your preferred language" : null,
+                    onChanged: (v) => setState(() => language = v),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
-                const SizedBox(height: 16),
 
                 /// CONCERN
-                _label("Primary Concern"),
+                _label(widget.isClinic ? "Treatment" : "Primary Concern"),
 
-                loadingConcern
+                widget.isClinic
+                    ? _smallTextField(
+                  hint: "Enter treatment",
+                  controller: treatmentController,
+                  validator: (v) =>
+                  v == null || v.isEmpty ? "Please enter treatment" : null,
+                )
+                    : loadingConcern
                     ? const CircularProgressIndicator()
                     : _concernDropdown(),
+
 
 
                 const SizedBox(height: 16),
@@ -522,10 +539,13 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                 const SizedBox(height: 16),
 
                 /// COUPON
-                _label("Coupon Code (optional)"),
+                _label(widget.isClinic ? "Notes" : "Coupon Code (optional)"),
+
                 _smallTextField(
-                  controller: couponController,
-                  hint: "Enter coupon code (if any)",
+                  controller: widget.isClinic ? notesController : couponController,
+                  hint: widget.isClinic
+                      ? "Enter notes"
+                      : "Enter coupon code (if any)",
                 ),
 
                 const SizedBox(height: 25),
@@ -551,14 +571,15 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                         color: Colors.white,
                       ),
                     )
-                        : const Text(
-                      "Submit Appointment",
-                      style: TextStyle(
+                        :  Text(
+                      widget.isClinic ? "Submit" : "Submit Appointment",
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                     ),
+
                   ),
                 ),
 
@@ -639,6 +660,8 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     try {
       final response =
       await AppointmentApiService.createAppointment(request);
+
+      print('response+++++$response');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -999,7 +1022,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   Widget _dateField() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _label("Preferred Date"),
+      _label(widget.isClinic ? "Treatment Date" : "Preferred Date"),
       const SizedBox(height: 4),
       InkWell(
         onTap: pickDate,
@@ -1017,7 +1040,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   Widget _timeField() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _label("Preferred Time"),
+      _label(widget.isClinic ? "Treatment Time" : "Preferred Time"),
       const SizedBox(height: 4),
       InkWell(
         onTap: pickTime,
@@ -1031,6 +1054,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       ),
     ],
   );
+
 
   Widget _pickerBox({
     required String text,

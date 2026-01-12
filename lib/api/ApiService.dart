@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 import 'Appointment.dart';
 import 'AppointmentResponse.dart';
+import 'login_response.dart';
 
 class ApiService {
   static const String baseUrl =
@@ -39,6 +40,28 @@ class ApiService {
       throw Exception("Failed to load appointments");
     }
   }
+
+  static Future<ClinicLoginResponse> clinicLogin(
+      String username,
+      String password,
+      ) async {
+    final response = await ApiService.post(
+      "/clinics/auth/login",
+      {
+        "username": username,
+        "password": password,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return ClinicLoginResponse.fromJson(
+        jsonDecode(response.body),
+      );
+    } else {
+      throw Exception("Clinic login failed");
+    }
+  }
+
 
 
 }

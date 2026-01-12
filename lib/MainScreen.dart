@@ -1,14 +1,11 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'HomePage.dart';
 import 'PaymentHistoryTab.dart';
 import 'ProfilePage.dart';
 import 'SessionsPage.dart';
 import 'api/user_model.dart';
-
-
-import 'package:flutter/material.dart';
 
 class MainScreen extends StatefulWidget {
   final String doctorId;
@@ -27,7 +24,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  /// 🔑 KEYS
+  /// 🔑 PAGE KEYS (DOCTOR ONLY)
   final GlobalKey<SessionsPageState> _sessionsKey =
   GlobalKey<SessionsPageState>();
   final GlobalKey<PaymentHistoryTabState> _paymentKey =
@@ -40,27 +37,47 @@ class _MainScreenState extends State<MainScreen> {
   static const Color inactiveColor = Color(0xFF94A3B8);
   static const Color bgColor = Colors.white;
 
+  /// 🔐 ROLE CHECK
+  bool get isClinic => widget.user.role == "clinic";
+
   @override
   void initState() {
     super.initState();
 
-    _pages = [
-      HomePage(
-        doctorId: widget.doctorId,
-        username: widget.user.username,
-      ),
-      PaymentHistoryTab(
-        key: _paymentKey,
-        doctorId: widget.doctorId,
-        username: widget.user.username,
-      ),
-      SessionsPage(
-        key: _sessionsKey,
-        doctorId: widget.doctorId,
-        username: widget.user.username,
-      ),
-      ProfilePage(user: widget.user),
-    ];
+    debugPrint("ID       : ${widget.doctorId}");
+    debugPrint("Username : ${widget.user.username}");
+    debugPrint("Role     : ${widget.user.role}");
+
+    if (isClinic) {
+      _pages = [
+        HomePage(
+          doctorId: widget.doctorId,
+          username: widget.user.username,
+          isClinic: widget.user.role == "clinic",
+        ),
+        ProfilePage(user: widget.user),
+      ];
+    } else {
+      _pages = [
+        HomePage(
+          doctorId: widget.doctorId,
+          username: widget.user.username,
+          isClinic: widget.user.role == "clinic",
+
+        ),
+        PaymentHistoryTab(
+          key: _paymentKey,
+          doctorId: widget.doctorId,
+          username: widget.user.username,
+        ),
+        SessionsPage(
+          key: _sessionsKey,
+          doctorId: widget.doctorId,
+          username: widget.user.username,
+        ),
+        ProfilePage(user: widget.user),
+      ];
+    }
   }
 
   @override
@@ -71,12 +88,9 @@ class _MainScreenState extends State<MainScreen> {
         children: _pages,
       ),
 
-      /// 🔻 ANIMATED BOTTOM BAR
+      /// 🔻 BOTTOM NAV BAR (ROLE BASED)
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: bgColor,
-
-        ),
+        decoration: const BoxDecoration(color: bgColor),
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           currentIndex: _currentIndex,
@@ -86,7 +100,12 @@ class _MainScreenState extends State<MainScreen> {
           selectedFontSize: 12,
           unselectedFontSize: 11,
           onTap: _onTabChanged,
-          items: [
+          items: isClinic
+              ? [
+            _navItem(Icons.event, "Home", 0),
+            _navItem(Icons.person, "Profile", 1),
+          ]
+              : [
             _navItem(Icons.event, "Appointments", 0),
             _navItem(Icons.history, "Payments", 1),
             _navItem(Icons.video_camera_front, "Sessions", 2),
@@ -101,18 +120,21 @@ class _MainScreenState extends State<MainScreen> {
   void _onTabChanged(int index) {
     setState(() => _currentIndex = index);
 
-    if (index == 2) {
-      debugPrint("🔁 Reload Sessions");
-      _sessionsKey.currentState?.loadSessions();
-    }
+    /// ❗ DOCTOR ONLY ACTIONS
+    if (!isClinic) {
+      if (index == 2) {
+        debugPrint("🔁 Reload Sessions");
+        _sessionsKey.currentState?.loadSessions();
+      }
 
-    if (index == 1) {
-      debugPrint("🔁 Reload Payment History");
-      _paymentKey.currentState?.reload();
+      if (index == 1) {
+        debugPrint("🔁 Reload Payment History");
+        _paymentKey.currentState?.reload();
+      }
     }
   }
 
-  /// 🎯 ANIMATED NAV ITEM
+  /// 🎯 NAV ITEM
   BottomNavigationBarItem _navItem(
       IconData icon,
       String label,
@@ -140,9 +162,3 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 }
-
-
-
-
-
-

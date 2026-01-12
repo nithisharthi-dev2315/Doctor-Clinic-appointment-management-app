@@ -1,19 +1,28 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import 'LoginEntryPage.dart';
 import 'Preferences/AppPreferences.dart';
 import 'api/user_model.dart';
-
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ProfilePage extends StatelessWidget {
   final UserModel user;
 
   const ProfilePage({super.key, required this.user});
+
+  /// 🔑 ROLE CHECK
+  bool get isClinic => user.role == "clinic";
+
+  /// 🔑 DISPLAY NAME
+  String get displayName =>
+      isClinic ? user.username : "Dr. ${user.username}";
+
+  /// 🔑 ID LABEL
+  String get idLabel => isClinic ? "Clinic ID" : "Doctor ID";
+
+  /// 🔑 ROLE TEXT
+  String get roleText => isClinic ? "CLINIC" : "DOCTOR";
 
   @override
   Widget build(BuildContext context) {
@@ -59,8 +68,9 @@ class ProfilePage extends StatelessWidget {
 
                   const SizedBox(height: 14),
 
+                  /// ✅ NAME (Doctor / Clinic)
                   Text(
-                    "Dr. ${user.username}",
+                    displayName,
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       fontSize: 20,
@@ -71,8 +81,9 @@ class ProfilePage extends StatelessWidget {
 
                   const SizedBox(height: 6),
 
+                  /// ✅ ROLE
                   Text(
-                    user.role.toUpperCase(),
+                    roleText,
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       color: const Color(0xFF64748B),
@@ -85,9 +96,10 @@ class ProfilePage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
+            /// ✅ ID (Doctor / Clinic)
             _profileTile(
               icon: Icons.badge_outlined,
-              title: "Doctor ID",
+              title: idLabel,
               value: user.id,
             ),
 
@@ -121,10 +133,9 @@ class ProfilePage extends StatelessWidget {
                     "Logout",
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFFDC2626)
+                      color: const Color(0xFFDC2626),
                     ),
                   ),
-
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFDC2626),
                     side: const BorderSide(color: Color(0xFFDC2626)),
@@ -145,17 +156,14 @@ class ProfilePage extends StatelessWidget {
   }
 
   // --------------------------------------------------------------------------
-  // 🔹 LOGOUT CONFIRMATION POP-IN DIALOG
+  // 🔹 LOGOUT DIALOG
   // --------------------------------------------------------------------------
-
   Future<void> _showLogoutDialog(BuildContext context) async {
     final confirm = await showGeneralDialog<bool>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: "Logout",
+      barrierDismissible: false, // ✅ important
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 250),
-
       pageBuilder: (_, __, ___) {
         return Center(
           child: Padding(
@@ -168,15 +176,12 @@ class ProfilePage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-
                     const Icon(
                       Icons.logout_rounded,
                       size: 42,
                       color: Color(0xFFDC2626),
                     ),
-
                     const SizedBox(height: 12),
-
                     Text(
                       "Confirm Logout",
                       style: GoogleFonts.poppins(
@@ -184,9 +189,7 @@ class ProfilePage extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-
                     const SizedBox(height: 8),
-
                     Text(
                       "Are you sure you want to logout from your account?",
                       textAlign: TextAlign.center,
@@ -195,15 +198,14 @@ class ProfilePage extends StatelessWidget {
                         color: Colors.grey[600],
                       ),
                     ),
-
                     const SizedBox(height: 20),
-
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () =>
-                                Navigator.pop(context, false),
+                                Navigator.of(context, rootNavigator: true)
+                                    .pop(false),
                             child: const Text("Cancel"),
                           ),
                         ),
@@ -211,12 +213,15 @@ class ProfilePage extends StatelessWidget {
                         Expanded(
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                              const Color(0xFFDC2626),
+                              backgroundColor: const Color(0xFFDC2626),
                             ),
                             onPressed: () =>
-                                Navigator.pop(context, true),
-                            child: const Text("Logout",style: TextStyle(color: Colors.white),),
+                                Navigator.of(context, rootNavigator: true)
+                                    .pop(true),
+                            child: const Text(
+                              "Logout",
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                         ),
                       ],
@@ -228,51 +233,22 @@ class ProfilePage extends StatelessWidget {
           ),
         );
       },
-
-      // 🔹 POP-IN ANIMATION
-      transitionBuilder: (_, animation, __, child) {
-        return FadeTransition(
-          opacity: animation,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.95, end: 1.0).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              ),
-            ),
-            child: child,
-          ),
-        );
-      },
     );
 
     if (confirm == true && context.mounted) {
       await AppPreferences.logout();
-      Navigator.pushAndRemoveUntil(
-        context,
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 300),
-          pageBuilder: (_, __, ___) => const LoginEntryPage(),
-          transitionsBuilder: (_, animation, __, child) {
-            final tween = Tween<Offset>(
-              begin: const Offset(1.0, 0.0),
-              end: Offset.zero,
-            ).chain(CurveTween(curve: Curves.easeOutCubic));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
-        ),
-            (route) => false,
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginEntryPage()),
+            (_) => false,
       );
     }
   }
 
+
   // --------------------------------------------------------------------------
   // 🔹 PROFILE TILE
   // --------------------------------------------------------------------------
-
   Widget _profileTile({
     required IconData icon,
     required String title,
@@ -343,8 +319,9 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // --------------------------------------------------------------------------
 
+
+  // --------------------------------------------------------------------------
   Future<void> _callNumber(String number) async {
     final uri = Uri.parse("tel:$number");
     await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -355,8 +332,3 @@ class ProfilePage extends StatelessWidget {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
-
-
-
-
-

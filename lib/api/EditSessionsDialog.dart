@@ -1,15 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-
-import '../Apiservice/appointment_api_service.dart';
-import '../SessionUpdateRequest.dart';
-import '../model/DoctorPayment.dart';
-
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-
 import '../Apiservice/appointment_api_service.dart';
 import '../SessionUpdateRequest.dart';
 import '../model/DoctorPayment.dart';

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../api/login_api.dart';
+import 'LoginEntryPage.dart';
 import 'MainScreen.dart';
 import 'Preferences/AppPreferences.dart';
 import 'api/login_request.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'api/login_response.dart';
 import 'api/user_model.dart';
 
 /*class DoctorLoginPage extends StatefulWidget {
@@ -311,7 +313,12 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
 }*/
 
 class DoctorLoginPage extends StatefulWidget {
-  const DoctorLoginPage({super.key});
+  final LoginType loginType;
+  const DoctorLoginPage({
+    super.key,
+    required this.loginType,
+  });
+
 
   @override
   State<DoctorLoginPage> createState() => _DoctorLoginPageState();
@@ -368,6 +375,63 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
       setState(() => isLoading = false);
     }
   }
+
+
+  Future<void> _clinicLogin() async {
+    final username = usernameController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      _showSnack("Enter username & password");
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final response = await LoginApi.clinicLogin(
+        LoginRequest(username: username, password: password),
+      );
+
+      if (response.success) {
+        final clinic = response.clinic;
+
+        // 🔐 SAVE ALL KEYS
+        await AppPreferences.setclinicId(clinic.id);
+        await AppPreferences.setUsername(clinic.username);
+        await AppPreferences.setEmail(clinic.email ?? "");
+        await AppPreferences.setMobile(clinic.mobileNo);
+        await AppPreferences.setRole(clinic.role);
+        await AppPreferences.setPassword(password);
+        await AppPreferences.setLoggedIn(true);
+
+        // ➜ Convert to UserModel for old MainScreen
+        final userModel = clinicUserToUserModel(clinic);
+
+        _showSnack("Login successful", success: true);
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MainScreen(
+              doctorId: clinic.id,
+              user: userModel,
+            ),
+          ),
+              (_) => false,
+        );
+      } else {
+        _showSnack("Login failed");
+      }
+    } catch (e) {
+      _showSnack("Invalid username or password");
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+
+
 
   void _showSnack(String msg, {bool success = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -484,7 +548,12 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: isLoading ? null : _login,
+                      onPressed: isLoading
+                          ? null
+                          : widget.loginType == LoginType.doctor
+                          ? _login
+                          : _clinicLogin,
+
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryBlue,
                         elevation: 0,

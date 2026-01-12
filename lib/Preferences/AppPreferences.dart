@@ -9,8 +9,12 @@ class AppPreferences {
     _prefs ??= await SharedPreferences.getInstance();
   }
 
+
+
+
   // 🔑 KEYS
   static const String keyDoctorId = "doctor_id";
+  static const String keyclinicId = "clinic_id";
   static const String keyUsername = "username";
   static const String keyPassword = "password";
   static const String keyIsLoggedIn = "is_logged_in";
@@ -21,6 +25,9 @@ class AppPreferences {
   // 🟢 SETTERS
   static Future<void> setDoctorId(String value) async =>
       await _prefs?.setString(keyDoctorId, value);
+
+  static Future<void> setclinicId(String value) async =>
+      await _prefs?.setString(keyclinicId, value);
 
   static Future<void> setUsername(String value) async =>
       await _prefs?.setString(keyUsername, value);
@@ -43,6 +50,9 @@ class AppPreferences {
   // 🔵 GETTERS
   static String getDoctorId() =>
       _prefs?.getString(keyDoctorId) ?? "";
+
+  static String getClinicId() =>
+      _prefs?.getString(keyclinicId) ?? "";
 
   static String getUsername() =>
       _prefs?.getString(keyUsername) ?? "";

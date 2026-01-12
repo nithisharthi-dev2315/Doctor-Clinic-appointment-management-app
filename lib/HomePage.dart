@@ -11,11 +11,15 @@ import 'model/appointment_request.dart';
 class HomePage extends StatefulWidget {
   final String doctorId;
   final String username;
+  final bool isClinic;
+
 
   const HomePage({
     super.key,
     required this.doctorId,
     required this.username,
+    required this.isClinic,
+
   });
 
   @override
@@ -78,6 +82,8 @@ class _HomePageState extends State<HomePage> {
               pageBuilder: (_, __, ___) => BookAppointmentPage(
                 doctorId: widget.doctorId,
                 doctorUsername: widget.username,
+                  isClinic:widget.isClinic
+
               ),
               transitionsBuilder: (_, animation, __, child) {
                 final tween = Tween<Offset>(

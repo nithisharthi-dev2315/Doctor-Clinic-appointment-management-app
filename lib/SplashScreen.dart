@@ -23,28 +23,23 @@ class _SplashScreenState extends State<SplashScreen> {
   void _checkAutoLogin() async {
     await Future.delayed(const Duration(seconds: 3));
 
-    final savedUsername = AppPreferences.getUsername();
-    final savedPassword = AppPreferences.getPassword();
-    final doctorId = AppPreferences.getDoctorId();
     final isLoggedIn = AppPreferences.isLoggedIn();
+
+    final clinicId = AppPreferences.getClinicId();
+    final doctorId = AppPreferences.getDoctorId();
+
+    final username = AppPreferences.getUsername();
     final email = AppPreferences.getEmail();
     final mobile = AppPreferences.getMobile();
     final role = AppPreferences.getRole();
 
-    debugPrint('savedUsername: $savedUsername');
-    debugPrint('savedPassword: $savedPassword');
-    debugPrint('doctorId: $doctorId');
-    debugPrint('isLoggedIn: $isLoggedIn');
-
     if (!mounted) return;
 
-    if (savedUsername.isNotEmpty &&
-        savedPassword.isNotEmpty &&
-        doctorId.isNotEmpty &&
-        isLoggedIn) {
+    if (isLoggedIn && clinicId.isNotEmpty && role == "clinic") {
+      /// 🏥 CLINIC LOGIN
       final user = UserModel(
-        id: doctorId,
-        username: savedUsername,
+        id: clinicId,
+        username: username,
         email: email,
         mobileNo: mobile,
         role: role,
@@ -53,18 +48,47 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => MainScreen(doctorId: doctorId,user:user),
+          builder: (_) => MainScreen(
+            doctorId: clinicId,
+            user: user,
+          ),
         ),
       );
-    } else {
+      return;
+    }
+
+    if (isLoggedIn && doctorId.isNotEmpty && role == "doctor") {
+      /// 👨‍⚕️ DOCTOR LOGIN
+      final user = UserModel(
+        id: doctorId,
+        username: username,
+        email: email,
+        mobileNo: mobile,
+        role: role,
+      );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => LoginEntryPage(),
+          builder: (_) => MainScreen(
+            doctorId: doctorId,
+            user: user,
+          ),
         ),
       );
+      return;
     }
+
+    /// ❌ NOT LOGGED IN
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LoginEntryPage(),
+      ),
+    );
   }
+
+
 
   @override
   Widget build(BuildContext context) {

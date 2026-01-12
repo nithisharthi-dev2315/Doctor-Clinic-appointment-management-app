@@ -2,13 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import 'DoctorLoginPage.dart';
+import 'privacy_policy_screen.dart';
 
 enum LoginType { doctor, clinic }
 
 class LoginEntryPage extends StatelessWidget {
   const LoginEntryPage({super.key});
-
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +22,7 @@ class LoginEntryPage extends StatelessWidget {
         child: SingleChildScrollView(
           child: Column(
             children: [
+              /// 🔹 TOP LOGO SECTION
               Container(
                 width: MediaQuery.of(context).size.width,
                 padding: const EdgeInsets.only(top: 70, bottom: 40),
@@ -42,12 +44,11 @@ class LoginEntryPage extends StatelessWidget {
                 ),
               ),
 
-              /// 🔹 BODY CONTENT WITH SIDE PADDING
+              /// 🔹 BODY CONTENT
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-
                     const SizedBox(height: 20),
 
                     /// 📝 TITLE
@@ -76,9 +77,7 @@ class LoginEntryPage extends StatelessWidget {
 
                     const SizedBox(height: 20),
 
-
-
-
+                    /// 👨‍⚕️ DOCTOR LOGIN
                     _brandLoginCard(
                       title: "Doctor Login",
                       subtitle: "Secure portal for practitioners",
@@ -87,14 +86,20 @@ class LoginEntryPage extends StatelessWidget {
                         Navigator.push(
                           context,
                           PageRouteBuilder(
-                            transitionDuration: const Duration(milliseconds: 300),
-                            pageBuilder: (_, __, ___) => const DoctorLoginPage(),
-                            transitionsBuilder: (_, animation, __, child) {
+                            transitionDuration:
+                            const Duration(milliseconds: 300),
+                            pageBuilder: (_, __, ___) =>
+                            const DoctorLoginPage(
+                              loginType: LoginType.doctor,
+                            ),
+                            transitionsBuilder:
+                                (_, animation, __, child) {
                               final tween = Tween<Offset>(
                                 begin: const Offset(1.0, 0.0),
                                 end: Offset.zero,
                               ).chain(
-                                CurveTween(curve: Curves.easeOutCubic),
+                                CurveTween(
+                                    curve: Curves.easeOutCubic),
                               );
 
                               return SlideTransition(
@@ -109,16 +114,25 @@ class LoginEntryPage extends StatelessWidget {
 
                     const SizedBox(height: 16),
 
+                    /// 🏥 CLINIC LOGIN
                     _brandLoginCard(
                       title: "Clinic Login",
                       subtitle: "Access clinic administration",
-                      imagePath: "assert/image/office-building.png",
-
+                      imagePath:
+                      "assert/image/office-building.png",
                       onTap: () {
-                        // Navigate to Clinic Login Page
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DoctorLoginPage(
+                              loginType: LoginType.clinic,
+                            ),
+                          ),
+                        );
                       },
                     ),
-                  const SizedBox(height: 40),
+
+                    const SizedBox(height: 40),
 
                     /// ☎ SUPPORT
                     Row(
@@ -145,6 +159,30 @@ class LoginEntryPage extends StatelessWidget {
                       ],
                     ),
 
+                    const SizedBox(height: 20),
+
+                    /// 🔐 PRIVACY POLICY BUTTON
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                            const PrivacyPolicyScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        "Privacy Policy",
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.5,
+                          color: const Color(0xFF64748B),
+                          decoration:
+                          TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 30),
                   ],
                 ),
@@ -156,13 +194,11 @@ class LoginEntryPage extends StatelessWidget {
     );
   }
 
-
-  /// 🔹 LOGIN CARD
-  /// 🔹 PREMIUM BRAND LOGIN CARD (FORMAL & DECENT)
+  /// 🔹 PREMIUM LOGIN CARD
   Widget _brandLoginCard({
     required String title,
     required String subtitle,
-    required String imagePath, // 🔹 image path instead of IconData
+    required String imagePath,
     required VoidCallback onTap,
   }) {
     return Container(
@@ -189,19 +225,16 @@ class LoginEntryPage extends StatelessWidget {
           onTap: onTap,
           child: Row(
             children: [
-
-              /// 🔹 LEFT ACCENT STRIP
               Container(
                 width: 5,
                 height: 90,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.only(
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(18),
                     bottomLeft: Radius.circular(18),
                   ),
                 ),
               ),
-
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -210,36 +243,28 @@ class LoginEntryPage extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-
-                      /// 🔹 IMAGE ICON
                       Container(
                         height: 50,
                         width: 50,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Image.asset(
-                            imagePath,
-                            fit: BoxFit.contain,
-                          ),
+                        padding: const EdgeInsets.all(8),
+                        child: Image.asset(
+                          imagePath,
+                          fit: BoxFit.contain,
                         ),
                       ),
-
                       const SizedBox(width: 16),
-
-                      /// 🔹 TEXT
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                          CrossAxisAlignment.start,
                           children: [
                             Text(
                               title,
                               style: GoogleFonts.poppins(
                                 fontSize: 15.5,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF0F172A),
+                                color:
+                                const Color(0xFF0F172A),
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -247,24 +272,26 @@ class LoginEntryPage extends StatelessWidget {
                               subtitle,
                               style: GoogleFonts.poppins(
                                 fontSize: 12.5,
-                                color: const Color(0xFF64748B),
+                                color:
+                                const Color(0xFF64748B),
                               ),
                             ),
                           ],
                         ),
                       ),
-
-                      /// 🔹 ARROW
                       Container(
                         height: 36,
                         width: 36,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(10),
+                          color:
+                          const Color(0xFFF1F5F9),
+                          borderRadius:
+                          BorderRadius.circular(10),
                         ),
                         child: const Icon(
                           Icons.chevron_right_rounded,
-                          color: Color(0xFF64748B),
+                          color:
+                          Color(0xFF64748B),
                           size: 22,
                         ),
                       ),
@@ -278,12 +305,11 @@ class LoginEntryPage extends StatelessWidget {
       ),
     );
   }
-
-
 }
+
+/// ☎ CALL SUPPORT
 Future<void> _callSupport() async {
   const phoneNumber = "9429692742";
-
   final Uri uri = Uri.parse("tel:$phoneNumber");
 
   if (!await launchUrl(
@@ -293,7 +319,3 @@ Future<void> _callSupport() async {
     debugPrint("Could not launch dialer");
   }
 }
-
-
-
-

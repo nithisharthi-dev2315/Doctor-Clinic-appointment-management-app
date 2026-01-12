@@ -18,4 +18,22 @@ class LoginApi {
       throw Exception("Login failed");
     }
   }
+
+  static Future<ClinicLoginResponse> clinicLogin(
+      LoginRequest request,
+      ) async {
+    final http.Response response = await ApiService.post(
+      "/clinics/auth/login",
+      request.toJson(),
+    );
+
+    if (response.statusCode == 200) {
+      return ClinicLoginResponse.fromJson(
+        jsonDecode(response.body),
+      );
+    } else {
+      throw Exception("Clinic login failed");
+    }
+  }
+
 }
