@@ -5,6 +5,7 @@ import '../api/login_api.dart';
 import 'LoginEntryPage.dart';
 import 'MainScreen.dart';
 import 'Preferences/AppPreferences.dart';
+import 'TokenManager.dart';
 import 'api/login_request.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'api/login_response.dart';
@@ -328,6 +329,8 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+
+
   bool hidePassword = true;
   bool isLoading = false;
 
@@ -396,26 +399,28 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
       if (response.success) {
         final clinic = response.clinic;
 
-        // 🔐 SAVE ALL KEYS
         await AppPreferences.setclinicId(clinic.id);
         await AppPreferences.setUsername(clinic.username);
         await AppPreferences.setEmail(clinic.email ?? "");
         await AppPreferences.setMobile(clinic.mobileNo);
         await AppPreferences.setRole(clinic.role);
+        await AppPreferences.setclinicname(clinic.clinicName);
         await AppPreferences.setPassword(password);
         await AppPreferences.setLoggedIn(true);
+        await TokenManager.saveToken(response.accessToken);
 
-        // ➜ Convert to UserModel for old MainScreen
         final userModel = clinicUserToUserModel(clinic);
 
         _showSnack("Login successful", success: true);
+        await TokenManager.loadTokenFromPrefs();
+
 
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
             builder: (_) => MainScreen(
               doctorId: clinic.id,
-              user: userModel,
+              user:   userModel,
             ),
           ),
               (_) => false,

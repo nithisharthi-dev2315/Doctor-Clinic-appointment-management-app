@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'ClinicInvoiceTab.dart';
+import 'HomePage.dart';
+import 'PaymentHistoryTab.dart';
+import 'ProfilePage.dart';
+import 'SessionsPage.dart';
+import 'api/user_model.dart';
+
+import 'package:flutter/material.dart';
+import 'ClinicInvoiceTab.dart';
 import 'HomePage.dart';
 import 'PaymentHistoryTab.dart';
 import 'ProfilePage.dart';
@@ -49,21 +58,25 @@ class _MainScreenState extends State<MainScreen> {
     debugPrint("Role     : ${widget.user.role}");
 
     if (isClinic) {
+      /// 🏥 CLINIC PAGES
       _pages = [
         HomePage(
           doctorId: widget.doctorId,
           username: widget.user.username,
-          isClinic: widget.user.role == "clinic",
+          isClinic: true,
+        ),
+        ClinicInvoiceTab(
+          doctorId: widget.doctorId,
         ),
         ProfilePage(user: widget.user),
       ];
     } else {
+      /// 👨‍⚕️ DOCTOR PAGES
       _pages = [
         HomePage(
           doctorId: widget.doctorId,
           username: widget.user.username,
-          isClinic: widget.user.role == "clinic",
-
+          isClinic: false,
         ),
         PaymentHistoryTab(
           key: _paymentKey,
@@ -88,7 +101,7 @@ class _MainScreenState extends State<MainScreen> {
         children: _pages,
       ),
 
-      /// 🔻 BOTTOM NAV BAR (ROLE BASED)
+      /// 🔻 BOTTOM NAV BAR
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(color: bgColor),
         child: BottomNavigationBar(
@@ -103,7 +116,8 @@ class _MainScreenState extends State<MainScreen> {
           items: isClinic
               ? [
             _navItem(Icons.event, "Home", 0),
-            _navItem(Icons.person, "Profile", 1),
+            _navItem(Icons.receipt_long, "Invoices", 1), // ✅ FIXED
+            _navItem(Icons.person, "Profile", 2),
           ]
               : [
             _navItem(Icons.event, "Appointments", 0),
@@ -134,7 +148,7 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  /// 🎯 NAV ITEM
+  /// 🎯 NAV ITEM UI
   BottomNavigationBarItem _navItem(
       IconData icon,
       String label,
@@ -162,3 +176,4 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 }
+

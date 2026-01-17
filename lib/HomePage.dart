@@ -1,11 +1,15 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'Apiservice/appointment_api_service.dart';
 import 'BookYourAppointmentpage/BookYourAppointment.dart';
+import 'ClinicPatientDetailsPage.dart';
 import 'CommonWebViewPage.dart';
 import 'PatientDetailsPage.dart';
+import 'Preferences/AppPreferences.dart';
 import 'api/ApiService.dart';
 import 'api/Appointment.dart';
+import 'model/ClinicPatientResponse.dart';
 import 'model/appointment_request.dart';
 
 class HomePage extends StatefulWidget {
@@ -33,27 +37,45 @@ class _HomePageState extends State<HomePage> {
   DateTime? _selectedDate;
   late Future<List<Appointment>> _appointmentsFuture;
 
+  late Future<List<ClinicPatient>> _clinicPatientsFuture;
 
   @override
   void initState() {
     super.initState();
     _loadAppointments();
+    _init();
+    print('widget.doctorId==========${widget.doctorId}');
+  }
+  Future<void> _init() async {
+    String token = await AppPreferences.getAccessToken();
+    await AppointmentApiService.regenerateToken(oldToken: token);
+
   }
 
   void _loadAppointments() {
-    _appointmentsFuture =
-        ApiService.getDoctorAppointments(widget.doctorId);
+    if (widget.isClinic) {
+      _clinicPatientsFuture =
+          ApiService.getClinicPatients(widget.doctorId);
+    } else {
+      _appointmentsFuture =
+          ApiService.getDoctorAppointments(widget.doctorId);
+    }
   }
+
 
   Future<void> _onRefresh() async {
     setState(() {
-      _appointmentsFuture =
-          ApiService.getDoctorAppointments(widget.doctorId);
+      _loadAppointments();
     });
 
-    // wait for API (optional but recommended)
-    await _appointmentsFuture;
+    if (widget.isClinic) {
+      await _clinicPatientsFuture;
+    } else {
+      await _appointmentsFuture;
+    }
   }
+
+
 
 
   @override
@@ -72,182 +94,510 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
 
-
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: widget.isClinic
+          ? _clinicFloatingButtons(context) // ✅ custom rounded button
+          : FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            PageRouteBuilder(
-              transitionDuration: const Duration(milliseconds: 300),
-              pageBuilder: (_, __, ___) => BookAppointmentPage(
+            MaterialPageRoute(
+              builder: (_) => BookAppointmentPage(
                 doctorId: widget.doctorId,
                 doctorUsername: widget.username,
-                  isClinic:widget.isClinic
-
+                isClinic: widget.isClinic,
               ),
-              transitionsBuilder: (_, animation, __, child) {
-                final tween = Tween<Offset>(
-                  begin: const Offset(1.0, 0.0),
-                  end: Offset.zero,
-                ).chain(CurveTween(curve: Curves.easeOutCubic));
-
-                return SlideTransition(
-                  position: animation.drive(tween),
-                  child: child,
-                );
-              },
             ),
           );
 
           if (result == true) {
             setState(() {
               _filterType = DateFilterType.upcoming;
-              _appointmentsFuture =
-                  ApiService.getDoctorAppointments(widget.doctorId);
+              _loadAppointments();
             });
           }
-
         },
-
-
-        // ✅ Centered white icon
+        backgroundColor: const Color(0xFF2563EB),
+        shape: const CircleBorder(),
         child: const Icon(
           Icons.add,
           color: Colors.white,
           size: 28,
         ),
-
-        // ✅ Perfect circle
-        shape: const CircleBorder(),
-
-        // ✅ Background color
-        backgroundColor: const Color(0xFF2563EB),
-
-        // Optional
-        elevation: 6,
       ),
+
+
 
 
       body: Column(
         children: [
           _filterBar(context),
           Expanded(
-            child: FutureBuilder<List<Appointment>>(
-              future: _appointmentsFuture,
-              builder: (context, snapshot) {
-
-                // 🔹 LOADING
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                // 🔹 ERROR
-                if (snapshot.hasError) {
-                  return RefreshIndicator(
-                    onRefresh: _onRefresh,
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        const SizedBox(height: 250),
-                        Center(
-                          child: Text(
-                            "Failed to load appointments",
-                            style: GoogleFonts.poppins(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final allAppointments = snapshot.data ?? [];
-                final filtered = _applyDateFilter(allAppointments);
-
-                // 🔹 EMPTY STATE
-                if (filtered.isEmpty) {
-                  return RefreshIndicator(
-                    onRefresh: _onRefresh,
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        const SizedBox(height: 120),
-                        Center(
-                          child: Column(
-                            children: [
-                              Image.asset(
-                                "assert/image/No Data.png",
-                                width: 180,
-                                height: 180,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                "No appointments found",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                // 🔹 LIST
-                return RefreshIndicator(
-                  onRefresh: _onRefresh,
-                  child: ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final appt = filtered[index];
-                      return AppointmentCard(
-                        appointment: appt,
-                        onViewDetails: () {
-
-
-                          Navigator.push(
-                            context,
-                            PageRouteBuilder(
-                              transitionDuration: const Duration(milliseconds: 300),
-                              pageBuilder: (_, __, ___) => PatientDetailsPage(
-                                patient: _toAppointmentRequest(appt),
-                                appointment: appt,
-                                doctorId: widget.doctorId,
-                              ),
-                              transitionsBuilder: (_, animation, __, child) {
-                                final tween = Tween<Offset>(
-                                  begin: const Offset(1.0, 0.0),
-                                  end: Offset.zero,
-                                ).chain(
-                                  CurveTween(curve: Curves.easeOutCubic),
-                                );
-
-                                return SlideTransition(
-                                  position: animation.drive(tween),
-                                  child: child,
-                                );
-                              },
-                            ),
-                          );
-
-                        },
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+            child: widget.isClinic
+                ? _clinicPatientListView()
+                : _appointmentListView(),
           ),
-
         ],
+      ),
+
+    );
+  }
+  Widget _clinicFloatingButtons(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: _clinicFabButton(
+        onTap: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BookAppointmentPage(
+                doctorId: widget.doctorId,
+                doctorUsername: widget.username,
+                isClinic: widget.isClinic,
+              ),
+            ),
+          );
+
+          if (result == true) {
+            _onRefresh();
+          }
+        },
       ),
     );
   }
+
+
+
+  Widget _clinicFabButton({
+    required VoidCallback onTap,
+    LinearGradient? gradient,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(50),
+      onTap: onTap,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: gradient ??
+              const LinearGradient(
+                colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+              ),
+          borderRadius: BorderRadius.circular(50),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+  Widget _appointmentListView() {
+    return FutureBuilder<List<Appointment>>(
+      future: _appointmentsFuture,
+      builder: (context, snapshot) {
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return RefreshIndicator(
+            onRefresh: _onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 250),
+                Center(child: Text("Failed to load appointments")),
+              ],
+            ),
+          );
+        }
+
+        final filtered = _applyDateFilter(snapshot.data ?? []);
+
+        if (filtered.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: _onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                const SizedBox(height: 120),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        "assert/image/No Data.png",
+                        width: 180,
+                        height: 180,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "No appointments found",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: _onRefresh,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: filtered.length,
+            itemBuilder: (context, index) {
+              final appt = filtered[index];
+              return AppointmentCard(
+                appointment: appt,
+                onViewDetails: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PatientDetailsPage(
+                        patient: _toAppointmentRequest(appt),
+                        appointment: appt,
+                        doctorId: widget.doctorId,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _clinicPatientListView() {
+    return FutureBuilder<List<ClinicPatient>>(
+      future: _clinicPatientsFuture,
+      builder: (context, snapshot) {
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return RefreshIndicator(
+            onRefresh: _onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 250),
+                Center(child: Text("Failed to load patients")),
+              ],
+            ),
+          );
+        }
+
+        final patients =
+        _applyClinicDateFilter(snapshot.data ?? []);
+
+        if (patients.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: _onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                const SizedBox(height: 120),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        "assert/image/No Data.png",
+                        width: 180,
+                        height: 180,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "No appointments found",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: _onRefresh,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: patients.length,
+            itemBuilder: (context, index) {
+              final p = patients[index];
+              return _clinicPatientCard(p,widget.doctorId);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  List<ClinicPatient> _applyClinicDateFilter(List<ClinicPatient> list) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    logFilter("----- CLINIC FILTER START -----");
+    logFilter("FilterType=$_filterType");
+    logFilter("SelectedDate=$_selectedDate");
+    logFilter("Today(Local)=$today");
+    logFilter("Total From API=${list.length}");
+
+    final filtered = list.where((p) {
+      if (p.treatmentDate == null) return false;
+
+      /// 🔥 UTC → LOCAL
+      final localDateTime = p.treatmentDate!.toLocal();
+
+      /// 🔹 Date-only
+      final treatmentDay = DateTime(
+        localDateTime.year,
+        localDateTime.month,
+        localDateTime.day,
+      );
+
+      bool match = false;
+
+      switch (_filterType) {
+        case DateFilterType.today:
+          match = treatmentDay == today;
+          break;
+
+        case DateFilterType.upcoming:
+          match = treatmentDay.isAfter(today) ||
+              treatmentDay.isAtSameMomentAs(today);
+          break;
+
+        case DateFilterType.custom:
+          if (_selectedDate == null) return true;
+
+          final selectedDay = DateTime(
+            _selectedDate!.year,
+            _selectedDate!.month,
+            _selectedDate!.day,
+          );
+
+          match = treatmentDay == selectedDay;
+          break;
+      }
+
+      logFilter(
+        "CHECK → ${p.name} | "
+            "API=${p.treatmentDate} | "
+            "Local=$localDateTime | "
+            "Match=$match",
+      );
+
+      return match;
+    }).toList();
+
+    /// ✅ Sort by DATE then TIME
+    filtered.sort((a, b) {
+      final d1 = a.treatmentDate!.toLocal();
+      final d2 = b.treatmentDate!.toLocal();
+
+      final dateCompare = d1.compareTo(d2);
+      if (dateCompare != 0) return dateCompare;
+
+      return a.treatmentTime.compareTo(b.treatmentTime);
+    });
+
+    logFilter("FINAL COUNT=${filtered.length}");
+    return filtered;
+  }
+
+
+
+  void logFilter(String msg) {
+    debugPrint("📅 FILTER LOG → $msg");
+  }
+
+  Widget _clinicPatientCard(ClinicPatient p,doctorId) {
+    final Color statusColor = const Color(0xFF2563EB); // same neutral badge color
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ClinicPatientDetailsPage(
+              patient: p,
+              doctorId: doctorId,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// 🔹 NAME + BADGE
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    p.name,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    "CLINIC",
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            /// 🔹 TREATMENT
+            Text(
+              p.treatment,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: const Color(0xFF475569),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            /// 🔹 DATE & TIME
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  size: 14,
+                  color: Color(0xFF64748B),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  "${_formatDateDDMMYYYY(p.treatmentDate)} • "
+                      "${_formatTo12Hour(p.treatmentTime)}",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            /// 🔹 MOBILE
+            Row(
+              children: [
+                const Icon(
+                  Icons.call_outlined,
+                  size: 14,
+                  color: Color(0xFF64748B),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  p.mobile,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  String _formatTo12Hour(String time24) {
+    try {
+      final parts = time24.split(':');
+      int hour = int.parse(parts[0]);
+      int minute = int.parse(parts[1]);
+
+      final isPm = hour >= 12;
+      hour = hour % 12;
+      if (hour == 0) hour = 12;
+
+      return "$hour:${minute.toString().padLeft(2, '0')} ${isPm ? 'PM' : 'AM'}";
+    } catch (_) {
+      return time24;
+    }
+  }
+
+  String _formatDateDDMMYYYY(DateTime? date) {
+    if (date == null) return "--/--/----";
+
+    final local = date.toLocal();
+    return "${local.day.toString().padLeft(2, '0')}/"
+        "${local.month.toString().padLeft(2, '0')}/"
+        "${local.year}";
+  }
+
+
+
 
   AppointmentRequest _toAppointmentRequest(Appointment a) {
     return AppointmentRequest(
@@ -373,6 +723,8 @@ class _HomePageState extends State<HomePage> {
           _filterType = type;
           _selectedDate = null;
         });
+        logFilter("FILTER CHIP CLICKED → $_filterType");
+
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -645,3 +997,518 @@ class AppointmentCard extends StatelessWidget {
     }
   }
 }
+class AddInvoiceDialog extends StatefulWidget {
+  const AddInvoiceDialog({super.key});
+
+  @override
+  State<AddInvoiceDialog> createState() => _AddInvoiceDialogState();
+}
+
+class _AddInvoiceDialogState extends State<AddInvoiceDialog> {
+  String? selectedPatientId;
+
+  final TextEditingController treatmentCtrl = TextEditingController();
+  final TextEditingController dateCtrl = TextEditingController();
+  final TextEditingController timeCtrl = TextEditingController();
+  final TextEditingController amountCtrl = TextEditingController();
+  String? time24Value;
+
+
+  List<ClinicPatient> patients = [];
+  bool isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatients();
+  }
+
+  Future<void> _loadPatients() async {
+    final clinicId = await AppPreferences.getClinicId();
+    final list = await ApiService.getClinicPatients(clinicId);
+
+    // ✅ unique patient names
+    final map = <String, ClinicPatient>{};
+    for (final p in list) {
+      map.putIfAbsent(p.name.toLowerCase(), () => p);
+    }
+
+    if (mounted) {
+      setState(() => patients = map.values.toList());
+    }
+  }
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (picked != null) {
+      // 🔹 24-hour format for API
+      final hour24 = picked.hour.toString().padLeft(2, '0');
+      final minute = picked.minute.toString().padLeft(2, '0');
+      time24Value = "$hour24:$minute";
+
+      // 🔹 12-hour format for UI
+      final hour12 = picked.hourOfPeriod == 0 ? 12 : picked.hourOfPeriod;
+      final period = picked.period == DayPeriod.am ? "AM" : "PM";
+
+      timeCtrl.text =
+      "${hour12.toString().padLeft(2, '0')}:${minute} $period";
+    }
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    return Dialog(
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: media.size.height * 0.70, // 🔑 prevents overflow
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              /// 🔹 HEADER
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Text(
+                      "Add Invoice",
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    InkWell(
+                      onTap: () => Navigator.pop(context),
+                      child: Text(
+                        "Close",
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: const Color(0xFF2563EB),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              /// 🔹 BODY (SCROLLABLE)
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+
+                      _label("Patient"),
+                      DropdownButtonFormField<String>(
+                        value: selectedPatientId,
+                        hint: const Text("Select Patient"),
+                        items: patients
+                            .map(
+                              (p) => DropdownMenuItem(
+                            value: p.id,
+                            child: Text(p.name),
+                          ),
+                        )
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => selectedPatientId = v),
+                        decoration: _inputDecoration("Select Patient"),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      _label("Treatment"),
+                      TextField(
+                        controller: treatmentCtrl,
+                        decoration: _inputDecoration("Treatment name"),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      _label("Date"),
+                      TextField(
+                        controller: dateCtrl,
+                        readOnly: true,
+                        decoration: _inputDecoration(
+                          "DD:MM:YYYY",
+                          icon: Icons.calendar_today_outlined,
+                        ),
+                        onTap: _pickDate,
+                      ),
+
+
+                      const SizedBox(height: 14),
+
+                      _label("Time"),
+                      TextField(
+                        controller: timeCtrl,
+                        readOnly: true,
+                        decoration: _inputDecoration(
+                          "hh:mm",
+                          icon: Icons.access_time,
+                        ),
+                        onTap: _pickTime,
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      _label("Amount"),
+                      TextField(
+                        controller: amountCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: _inputDecoration("Amount (₹)"),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              /// 🔹 ACTIONS (FIXED BOTTOM)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed:
+                        isSubmitting ? null : () => Navigator.pop(context),
+                        child: const Text("Cancel"),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed:
+                        isSubmitting ? null : _createInvoice,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                            : const Text(  "Create Invoice",
+                          style: TextStyle(color: Colors.white),),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+
+  Future<void> _createInvoice() async {
+    if (selectedPatientId == null) {
+      _showSnack("Please select patient");
+      return;
+    }
+
+    if (treatmentCtrl.text.trim().isEmpty) {
+      _showSnack("Please enter treatment name");
+      return;
+    }
+
+    if (dateCtrl.text.trim().isEmpty) {
+      _showSnack("Please select treatment date");
+      return;
+    }
+
+    if (timeCtrl.text.trim().isEmpty) {
+      _showSnack("Please select treatment time");
+      return;
+    }
+
+    if (amountCtrl.text.trim().isEmpty) {
+      _showSnack("Please enter amount");
+      return;
+    }
+
+    setState(() => isSubmitting = true);
+
+    try {
+      final patient =
+      patients.firstWhere((p) => p.id == selectedPatientId);
+
+      debugPrint("🟡 OLD patientId : ${patient.id}");
+
+
+      final patientBody = {
+        "name": patient.name,
+        "mobile": patient.mobile,
+        "treatment": treatmentCtrl.text.trim(),
+        "treatmentDate": dateCtrl.text.trim(),
+        "treatmentTime": timeCtrl.text.trim(),
+      };
+
+      debugPrint("📤 ADD PATIENT REQUEST:");
+      patientBody.forEach((k, v) => debugPrint("   $k : $v"));
+
+      final ClinicPatientResponse? response =
+      await AppointmentApiService.addClinicPatient(patientBody);
+
+      if (response == null) {
+        throw Exception("Patient creation failed");
+      }
+
+      final String newPatientId = response.patientId;
+
+      debugPrint("🟢 NEW patientId : $newPatientId");
+
+      /// 2️⃣ ₹ → PAISE
+      final double rupees =
+          double.tryParse(amountCtrl.text.trim()) ?? 0;
+      final int paise = (rupees * 100).round();
+
+      debugPrint("📤 GENERATE INVOICE REQUEST:");
+      debugPrint("   patientId : $newPatientId");
+      debugPrint("   amount    : ₹$rupees ($paise paise)");
+
+      /// 3️⃣ GENERATE INVOICE
+      final bool invoiceCreated =
+      await AppointmentApiService.generateInvoice(
+        patientId: newPatientId,
+        amount: paise.toString(),
+        treatment: treatmentCtrl.text.trim(),
+        notes: "",
+      );
+
+      if (!invoiceCreated) {
+        throw Exception("Invoice creation failed");
+      }
+
+      if (!mounted) return;
+
+      setState(() => isSubmitting = false);
+
+      debugPrint("✅ PATIENT & INVOICE CREATED SUCCESSFULLY");
+      await _showSuccessDialog();
+    } catch (e) {
+      debugPrint("❌ ERROR: $e");
+
+      if (!mounted) return;
+
+      setState(() => isSubmitting = false);
+      _showSnack("Failed to create invoice");
+    }
+  }
+
+
+
+  Future<void> showInvoiceCreatedDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 60,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Invoice Created Successfully",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "The invoice has been generated.",
+                  style: GoogleFonts.poppins(fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 45,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                    },
+                    child: Text(
+                      "OK",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF0D9488), // 🏥 Medical teal
+        content: Row(
+          children: [
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+
+  Future<void> _showSuccessDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(
+                Icons.check_circle,
+                size: 56,
+                color: Color(0xFF16A34A),
+              ),
+              SizedBox(height: 12),
+              Text(
+                "Invoice Created",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text(
+                "The invoice has been created successfully.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);      // ✅ close success dialog
+                Navigator.pop(context, true); // ✅ close invoice dialog
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+
+  /// ================= HELPERS =================
+
+  Widget _label(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          color: const Color(0xFF64748B),
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint, {IconData? icon}) {
+    return InputDecoration(
+      hintText: hint,
+      isDense: true,
+      suffixIcon: icon != null ? Icon(icon, size: 18) : null,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+      ),
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      dateCtrl.text =
+      "${picked.day.toString().padLeft(2, '0')}:"
+          "${picked.month.toString().padLeft(2, '0')}:"
+          "${picked.year}";
+    }
+  }
+
+
+}
+
+

@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../Apiservice/appointment_api_service.dart';
+import '../TokenManager.dart';
+import '../model/ClinicPatientResponse.dart';
 import '../model/ConcernModel.dart';
 import '../model/appointment_request.dart';
 
@@ -34,6 +36,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   final couponController = TextEditingController();
   final treatmentController = TextEditingController();
   final notesController  = TextEditingController();
+  final addressController  = TextEditingController();
 
 
 
@@ -55,6 +58,8 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   List<ConcernModel> concerns = [];
   ConcernModel? selectedConcern;
   bool loadingConcern = true;
+  late Future<List<ClinicPatient>> _clinicPatientsFuture;
+
 
 
   final Map<String, List<int>> countryMobileLengthRange = {
@@ -307,6 +312,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     print('widget.isClinic=========${widget.isClinic}');
   }
 
+
   Future<void> loadConcerns() async {
     try {
       final data = await AppointmentApiService.getConcerns();
@@ -509,6 +515,9 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                 ],
 
 
+
+
+
                 /// CONCERN
                 _label(widget.isClinic ? "Treatment" : "Primary Concern"),
 
@@ -535,6 +544,18 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                     Expanded(child: _timeField()),
                   ],
                 ),
+
+                const SizedBox(height: 16),
+
+            if (widget.isClinic) ...[
+                _label("Address"),
+                _addressField(
+                  controller: addressController,
+                  hint: "House No, Street, Area, City, State, Pincode",
+                  validator: (v) =>
+                  v == null || v.trim().isEmpty ? "Address is required" : null,
+                ),
+                ],
 
                 const SizedBox(height: 16),
 
@@ -611,10 +632,16 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       selectedTime == null ? "Preferred time is required" : null;
     });
 
-    if (valid &&
-        phoneError == null &&
-        dateError == null &&
-        timeError == null) {
+    if (!valid || phoneError != null || dateError != null || timeError != null) {
+      return;
+    }
+
+    /// ✅ CLINIC FLOW
+    if (widget.isClinic) {
+      submitClinicPatient();
+    }
+    /// ✅ DOCTOR FLOW (UNCHANGED)
+    else {
       submitAppointment();
     }
   }
@@ -700,6 +727,70 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     }
 
   }
+
+  Future<void> submitClinicPatient() async {
+    setState(() => isSubmitting = true);
+
+    try
+    {
+      final request = ClinicPatientRequest(
+        name: nameController.text.trim(),
+        mobile: phoneController.text.trim(),
+        age: int.parse(ageController.text.trim()),
+        email: emailController.text.trim(),
+        gender: gender!,
+        treatment: treatmentController.text.trim(),
+        treatmentDate:
+        DateFormat("yyyy-MM-dd").format(selectedDate!),
+        treatmentTime: convertTo24Hour(selectedTime!),
+        address: addressController.text.trim(),
+        notes: notesController.text.trim(),
+      );
+
+      debugPrint("CLINIC REQUEST:");
+      debugPrint(request.toJson().toString());
+
+
+      final token = await TokenManager.getValidToken();
+      debugPrint("API TOKEN → $token");
+
+
+      final response = await AppointmentApiService.addPatient(
+        token: token,
+        request: request,
+      );
+
+      debugPrint("CLINIC RESPONSE:");
+      debugPrint(response.patient.name);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            response.message,
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: const Color(0xFF0D9488),
+        ),
+      );
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      debugPrint("ERROR: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Something went wrong"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => isSubmitting = false);
+    }
+  }
+
+
+
+
   String convertTo24Hour(TimeOfDay time) {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
@@ -878,6 +969,58 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   }
 
 
+  Widget _addressField({
+    required TextEditingController controller,
+    required String hint,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.streetAddress,
+      minLines: 3,
+      maxLines: 5,
+      textInputAction: TextInputAction.newline,
+      validator: validator,
+
+      style: GoogleFonts.poppins(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: Colors.black,
+      ),
+
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: hint,
+        hintStyle: GoogleFonts.poppins(
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
+          color: Colors.grey,
+        ),
+        errorStyle: GoogleFonts.poppins(
+          fontSize: 11,
+          color: Colors.red,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 15,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.grey),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.blue),
+        ),
+      ),
+    );
+  }
+
+
+
 
   Widget _ageField() {
     return TextFormField(
@@ -977,8 +1120,8 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
           .toList(),
 
       decoration: InputDecoration(
-        isDense: true, // ✅ compact height
-        filled: true, // ✅ white background
+        isDense: true,
+        filled: true,
         fillColor: Colors.white,
 
         contentPadding: const EdgeInsets.symmetric(

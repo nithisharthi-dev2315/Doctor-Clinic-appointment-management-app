@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../Preferences/AppPreferences.dart';
 import '../SessionUpdateRequest.dart';
+import '../TokenManager.dart';
 import '../model/AddSessionRequest.dart';
 import '../model/AddSessionResponsee.dart';
 import '../model/AvailableDoctor.dart';
 import '../model/BookSessionPackage.dart';
+import '../model/ClinicDropdown.dart';
+import '../model/ClinicPatientResponse.dart';
 import '../model/ConcernModel.dart';
 import '../model/CreatePaymentLinkRequest.dart';
 import '../model/CreatePaymentLinkResponse.dart';
@@ -14,8 +18,10 @@ import '../model/DoctorPayment.dart';
 import '../model/EnquiryRequest.dart';
 import '../model/EnquiryResponse.dart';
 import '../model/PaymentHistoryResponse.dart';
+import '../model/TokenRefreshResponse.dart';
 import '../model/appointment_request.dart';
 import '../model/appointment_response.dart';
+import '../model/patient_invoice_response.dart';
 import '../utils/ApiConstants.dart';
 
 
@@ -564,6 +570,203 @@ import '../utils/ApiConstants.dart';
     final prettyString = encoder.convert(object);
     prettyString.split('\n').forEach(debugPrint);
   }
+
+  static const String _baseUrlpatent =
+      "https://srv1090011.hstgr.cloud/api/clinics/patients";
+
+  static Future<ClinicPatientResponse> addPatient({
+    required String token,
+    required ClinicPatientRequest request,
+  }) async {
+    final response = await http.post(
+      Uri.parse(_baseUrlpatent),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(request.toJson()),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return ClinicPatientResponse.fromJson(
+        jsonDecode(response.body),
+      );
+    } else {
+      throw Exception("API Error: ${response.body}");
+    }
+  }
+
+  static const String authTokenUrl =
+      "https://srv1090011.hstgr.cloud/api/token/regenerate";
+
+  static Future<TokenRefreshResponse> regenerateToken({
+    required String oldToken,
+  }) async {
+    final response = await http.post(
+      Uri.parse(authTokenUrl),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $oldToken",
+      },
+    );
+
+    debugPrint("🔄 TOKEN REFRESH STATUS → ${response.statusCode}");
+    debugPrint("🔄 TOKEN REFRESH BODY → ${response.body}");
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> json =
+      jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (json['success'] == true && json['accessToken'] != null) {
+        return TokenRefreshResponse.fromJson(json);
+      } else {
+        throw Exception("Token refresh failed: invalid response");
+      }
+    } else {
+      throw Exception("Token refresh failed: ${response.body}");
+    }
+  }
+
+
+  static const String grtpatenturl =
+      "https://srv1090011.hstgr.cloud/api/clinics/patients";
+
+  /// 🔹 Get Public Patient Details
+  static Future<ClinicPatientResponse> getPublicPatientDetails(
+      String patientId) async {
+    final url = Uri.parse("$grtpatenturl/public/$patientId");
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse =
+        json.decode(response.body);
+
+        return ClinicPatientResponse.fromJson(jsonResponse);
+      } else {
+        throw Exception(
+          "Failed to load patient details (${response.statusCode})",
+        );
+      }
+    } catch (e) {
+      throw Exception("API Error: $e");
+    }
+  }
+  static Future<List<ClinicDropdown>> getClinics() async {
+    final res = await http.get(
+      Uri.parse(
+        "https://srv1090011.hstgr.cloud/api/clinics/patients/clinics",
+      ),
+    );
+
+    final jsonData = json.decode(res.body);
+    final list = jsonData['data'] as List;
+
+    return list.map((e) => ClinicDropdown.fromJson(e)).toList();
+  }
+  static Future<bool> generateInvoice({
+    required String patientId,
+    required String amount,
+    required String treatment,
+    String notes = "",
+  }) async {
+    final token = await AppPreferences.getAccessToken();
+
+    final url = Uri.parse(
+      "https://srv1090011.hstgr.cloud/api/clinics/patients/$patientId/generate-invoice",
+    );
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({
+          "amount": amount,
+          "description": treatment,
+          "notes": notes,
+        }),
+      );
+
+      debugPrint("📥 INVOICE STATUS → ${response.statusCode}");
+      debugPrint("📥 INVOICE RAW → ${response.body}");
+
+      if (response.body.isEmpty) return false;
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      final bool success = data["success"] == true;
+
+      if (!success) {
+        debugPrint("❌ INVOICE FAILED → ${data["message"]}");
+      }
+
+      return success;
+    } catch (e) {
+      debugPrint("❌ INVOICE EXCEPTION → $e");
+      return false;
+    }
+  }
+
+  static Future<ClinicPatientResponse?> addClinicPatient(
+      Map<String, dynamic> body) async {
+
+    final token = await AppPreferences.getAccessToken();
+
+    final res = await http.post(
+      Uri.parse("https://srv1090011.hstgr.cloud/api/clinics/patients"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(body),
+    );
+
+    debugPrint("📥 ADD PATIENT RESPONSE:");
+    debugPrint(res.body);
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return ClinicPatientResponse.fromJson(jsonDecode(res.body));
+    }
+    return null;
+  }
+
+
+  static const String invoiceurl = "https://srv1090011.hstgr.cloud/api/clinics/patients/public";
+
+  static Future<PatientInvoiceResponse> fetchInvoices({
+    required String doctorId,
+  }) async {
+    print('doctorId==========${doctorId}');
+
+    final uri = Uri.parse("$invoiceurl/$doctorId");
+
+    final response = await http.get(
+      uri,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      return PatientInvoiceResponse.fromJson(decoded);
+    } else {
+      throw Exception(
+        "Failed to load invoices (${response.statusCode})",
+      );
+    }
+  }
+
+
 
 
   }

@@ -21,28 +21,33 @@ class LoginResponse {
 }
 class ClinicLoginResponse {
   final bool success;
+  final String accessToken;
   final ClinicUser clinic;
 
   ClinicLoginResponse({
     required this.success,
+    required this.accessToken,
     required this.clinic,
   });
 
   factory ClinicLoginResponse.fromJson(Map<String, dynamic> json) {
     return ClinicLoginResponse(
       success: json['success'] ?? false,
+      accessToken: json['access_token'] ?? '',
       clinic: ClinicUser.fromJson(json['user'] ?? {}),
     );
   }
 }
+
+
 class ClinicUser {
-  final String id;           // _id
-  final String clinicName;   // clinic_name
-  final String username;     // username
-  final String role;         // role
-  final String ownerRole;    // ownerRole
-  final String? email;       // email (nullable)
-  final String mobileNo;     // mobile_no
+  final String id;
+  final String clinicName;
+  final String username;
+  final String role;
+  final String ownerRole;
+  final String? email;
+  final String mobileNo;
 
   ClinicUser({
     required this.id,
@@ -66,6 +71,7 @@ class ClinicUser {
     );
   }
 }
+
 UserModel clinicUserToUserModel(ClinicUser clinic) {
   return UserModel(
     id: clinic.id,

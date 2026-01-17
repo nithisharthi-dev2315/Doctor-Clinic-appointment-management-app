@@ -185,6 +185,7 @@ class PaymentHistoryTabState extends State<PaymentHistoryTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             /// PACKAGE + STATUS
+/*
             Row(
               children: [
                 Expanded(
@@ -201,8 +202,9 @@ class PaymentHistoryTabState extends State<PaymentHistoryTab> {
                 _statusChip(p.status),
               ],
             ),
+*/
 
-            const SizedBox(height: 10),
+           // const SizedBox(height: 10),
 
             /// AMOUNT
             Text(

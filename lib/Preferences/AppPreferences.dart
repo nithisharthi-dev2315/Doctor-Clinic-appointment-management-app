@@ -16,11 +16,15 @@ class AppPreferences {
   static const String keyDoctorId = "doctor_id";
   static const String keyclinicId = "clinic_id";
   static const String keyUsername = "username";
+  static const String keyclinicname = "clinicname";
   static const String keyPassword = "password";
   static const String keyIsLoggedIn = "is_logged_in";
   static const String keyEmail = "email";
   static const String keyMobile = "mobile";
   static const String keyRole = "role";
+  static const String keyAccessToken = "access_token";
+
+
 
   // 🟢 SETTERS
   static Future<void> setDoctorId(String value) async =>
@@ -47,6 +51,10 @@ class AppPreferences {
   static Future<void> setRole(String value) async =>
       await _prefs?.setString(keyRole, value);
 
+  static Future<void> setclinicname(String value) async =>
+      await _prefs?.setString(keyclinicname, value);
+
+
   // 🔵 GETTERS
   static String getDoctorId() =>
       _prefs?.getString(keyDoctorId) ?? "";
@@ -72,9 +80,26 @@ class AppPreferences {
   static String getRole() =>
       _prefs?.getString(keyRole) ?? "";
 
+  static String getClinicname() =>
+      _prefs?.getString(keyclinicname) ?? "";
+
+
+
+
+  // 🔐 TOKEN
+  static Future<void> setAccessToken(String token) async =>
+      await _prefs?.setString(keyAccessToken, token);
+
+  static String getAccessToken() =>
+      _prefs?.getString(keyAccessToken) ?? "";
+
+
   // 🔴 CLEAR
   static Future<void> logout() async =>
       await _prefs?.clear();
+
+
+
 }
 
 

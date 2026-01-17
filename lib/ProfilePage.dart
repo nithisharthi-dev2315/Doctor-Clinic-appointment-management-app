@@ -24,6 +24,10 @@ class ProfilePage extends StatelessWidget {
   /// 🔑 ROLE TEXT
   String get roleText => isClinic ? "CLINIC" : "DOCTOR";
 
+  /// 🔑 CLINIC NAME
+  String get clinicName => AppPreferences.getClinicname();
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,12 +100,21 @@ class ProfilePage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            /// ✅ ID (Doctor / Clinic)
+            if (isClinic && clinicName.isNotEmpty)
+              _profileTile(
+                icon: Icons.local_hospital_rounded,
+                title: "Clinic Name",
+                value: clinicName,
+              ),
+
             _profileTile(
               icon: Icons.badge_outlined,
               title: idLabel,
               value: user.id,
             ),
+
+
+
 
             _profileTile(
               icon: Icons.phone_outlined,
@@ -110,12 +123,14 @@ class ProfilePage extends StatelessWidget {
               onTap: () => _callNumber(user.mobileNo),
             ),
 
-            _profileTile(
-              icon: Icons.email_outlined,
-              title: "Email Address",
-              value: user.email,
-              onTap: () => _sendEmail(user.email),
-            ),
+
+            if (_isValidEmail(user.email))
+              _profileTile(
+                icon: Icons.email_outlined,
+                title: "Email Address",
+                value: user.email!,
+                onTap: () => _sendEmail(user.email!),
+              ),
 
             const SizedBox(height: 30),
 
@@ -155,13 +170,18 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  bool _isValidEmail(String? email) {
+    return email != null && email.contains("@");
+  }
+
   // --------------------------------------------------------------------------
   // 🔹 LOGOUT DIALOG
   // --------------------------------------------------------------------------
   Future<void> _showLogoutDialog(BuildContext context) async {
     final confirm = await showGeneralDialog<bool>(
       context: context,
-      barrierDismissible: false, // ✅ important
+      barrierDismissible: false,
+      // ✅ important
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (_, __, ___) {
@@ -318,7 +338,6 @@ class ProfilePage extends StatelessWidget {
       ),
     );
   }
-
 
 
   // --------------------------------------------------------------------------
