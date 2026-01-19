@@ -16,13 +16,15 @@ class HomePage extends StatefulWidget {
   final String doctorId;
   final String username;
   final bool isClinic;
-
+  final VoidCallback onGoToInvoiceTab; // ✅ ADD
 
   const HomePage({
     super.key,
     required this.doctorId,
     required this.username,
     required this.isClinic,
+    required this.onGoToInvoiceTab,
+
 
   });
 
@@ -375,6 +377,8 @@ class _HomePageState extends State<HomePage> {
     logFilter("Today(Local)=$today");
     logFilter("Total From API=${list.length}");
 
+
+
     final filtered = list.where((p) {
       if (p.treatmentDate == null) return false;
 
@@ -446,11 +450,12 @@ class _HomePageState extends State<HomePage> {
 
   Widget _clinicPatientCard(ClinicPatient p,doctorId) {
     final Color statusColor = const Color(0xFF2563EB); // same neutral badge color
+    int _currentIndex = 0;
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => ClinicPatientDetailsPage(
@@ -459,7 +464,14 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         );
+
+        if (result == "go_to_invoice_tab") {
+          _onRefresh();              // refresh if needed
+          widget.onGoToInvoiceTab(); // ✅ change bottom tab
+        }
       },
+
+
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
@@ -1013,6 +1025,9 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog> {
   final TextEditingController amountCtrl = TextEditingController();
   String? time24Value;
 
+  DateTime? selectedDate; // ✅ ADD THIS
+
+
 
   List<ClinicPatient> patients = [];
   bool isSubmitting = false;
@@ -1022,6 +1037,8 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog> {
     super.initState();
     _loadPatients();
   }
+
+
 
   Future<void> _loadPatients() async {
     final clinicId = await AppPreferences.getClinicId();
@@ -1264,12 +1281,17 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog> {
 
       debugPrint("🟡 OLD patientId : ${patient.id}");
 
+      final String treatmentDateForApi =
+          "${selectedDate!.year}-"
+          "${selectedDate!.month.toString().padLeft(2, '0')}-"
+          "${selectedDate!.day.toString().padLeft(2, '0')}";
+
 
       final patientBody = {
         "name": patient.name,
         "mobile": patient.mobile,
         "treatment": treatmentCtrl.text.trim(),
-        "treatmentDate": dateCtrl.text.trim(),
+        "treatmentDate": treatmentDateForApi, // ✅ CORRECT
         "treatmentTime": timeCtrl.text.trim(),
       };
 
@@ -1495,20 +1517,19 @@ class _AddInvoiceDialogState extends State<AddInvoiceDialog> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: selectedDate ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
 
     if (picked != null) {
+      selectedDate = picked;
       dateCtrl.text =
-      "${picked.day.toString().padLeft(2, '0')}:"
-          "${picked.month.toString().padLeft(2, '0')}:"
+      "${picked.day.toString().padLeft(2, '0')}-"
+          "${picked.month.toString().padLeft(2, '0')}-"
           "${picked.year}";
     }
   }
-
-
 }
 
 

@@ -23,10 +23,11 @@ class ClinicInvoiceTab extends StatefulWidget {
   });
 
   @override
-  State<ClinicInvoiceTab> createState() => _ClinicInvoiceTabState();
+  State<ClinicInvoiceTab> createState() => ClinicInvoiceTabState();
 }
 
-class _ClinicInvoiceTabState extends State<ClinicInvoiceTab> {
+class ClinicInvoiceTabState extends State<ClinicInvoiceTab> {
+
   bool isLoading = true;
   List<PatientInvoiceItem> invoices = [];
 
@@ -37,6 +38,9 @@ class _ClinicInvoiceTabState extends State<ClinicInvoiceTab> {
   void initState() {
     super.initState();
     _loadInvoices();
+  }
+  Future<void> reloadInvoices() async {
+    await _loadInvoices();
   }
 
   Future<void> _loadInvoices() async {

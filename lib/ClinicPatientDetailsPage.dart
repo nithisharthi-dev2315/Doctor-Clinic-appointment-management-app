@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'Apiservice/appointment_api_service.dart';
-import 'ClinicInvoiceTab.dart';
 import 'TransferDialog.dart';
 import 'api/ApiService.dart';
 import 'model/ClinicPatientResponse.dart';
@@ -158,15 +157,9 @@ class ClinicPatientDetailsPage extends StatelessWidget {
                   );
 
                   if (created == true && context.mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ClinicInvoiceTab(
-                          doctorId: docterid,
-                        ),
-                      ),
-                    );
+                    Navigator.pop(context, "go_to_invoice_tab");
                   }
+
                   return;
                 }
 
@@ -234,7 +227,8 @@ class ClinicPatientDetailsPage extends StatelessWidget {
     required String patientName,
     required String treatment,
     required String doctorId,
-  }) {
+  })
+  {
     final amountCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
     bool isLoading = false;
@@ -351,7 +345,7 @@ class ClinicPatientDetailsPage extends StatelessWidget {
 
                             final success = await AppointmentApiService.generateInvoice(
                               patientId: patientId,
-                              amount: paise.toString(), // ✅ INT
+                              amount: paise.toString(),
                               treatment: treatment,
                               notes: notesCtrl.text.trim(),
                             );
@@ -362,7 +356,9 @@ class ClinicPatientDetailsPage extends StatelessWidget {
                             if (!context.mounted) return;
 
                             if (success) {
-                              Navigator.pop(parentContext, true);
+                             // Navigator.pop(parentContext, true);
+                              Navigator.pop(dialogContext, true); // close dialog only
+
                               ApiService.getDoctorAppointments(doctorId);
                             }
 

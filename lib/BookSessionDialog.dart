@@ -46,17 +46,28 @@ class _BookSessionDialogState extends State<BookSessionDialog> {
 
   Future<void> _loadPackages() async {
     try {
-      final data = await AppointmentApiService.getSessionsByConcern(
+      final sessionPackages =
+      await AppointmentApiService.getSessionsByConcern(
         widget.concern,
       );
+
+      final dietPackages =
+      await AppointmentApiService.getDietPackages();
+
       setState(() {
-        packages = data;
+        packages = [
+          ...sessionPackages,
+          ...dietPackages,
+        ];
         loadingPackages = false;
       });
+
+      debugPrint("✅ Total packages: ${packages.length}");
     } catch (e) {
       loadingPackages = false;
     }
   }
+
 
   // ─────────────────────────────────────────────────────────────
 

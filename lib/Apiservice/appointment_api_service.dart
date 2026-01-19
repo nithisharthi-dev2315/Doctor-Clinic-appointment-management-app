@@ -88,6 +88,9 @@ import '../utils/ApiConstants.dart';
     final url =
     Uri.parse("$baseUrl/sessions?concern=$concern");
 
+
+    print('url==========${url}');
+
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
@@ -165,6 +168,24 @@ import '../utils/ApiConstants.dart';
       throw Exception("Failed to create payment link");
     }
   }
+
+  static Future<List<SessionPackage>> getDietPackages() async {
+    final res = await http.get(
+      Uri.parse("https://srv1090011.hstgr.cloud/api/sessions/diet"),
+    );
+
+    final json = jsonDecode(res.body);
+
+    if (json['success'] != true) return [];
+
+    return (json['diet_packages'] as List)
+        .map((e) => SessionPackage.fromDietJson(e))
+        .toList();
+  }
+
+
+
+
 
   static const getdocurl =
       "https://srv1090011.hstgr.cloud/api/add_sessions";
