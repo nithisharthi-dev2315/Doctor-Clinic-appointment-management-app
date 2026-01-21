@@ -1310,7 +1310,7 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
 
       await launchUrl(
         uri,
-        mode: LaunchMode.externalApplication, // ✅ Opens Chrome / Browser
+        mode: LaunchMode.externalApplication,
       );
     } catch (e) {
       debugPrint("❌ Invoice launch failed: $e");

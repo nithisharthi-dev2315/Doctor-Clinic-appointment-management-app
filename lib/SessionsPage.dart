@@ -311,7 +311,7 @@ class SessionsPageState extends State<SessionsPage> {
             const SizedBox(width: 6),
             Text(
               _selectedDate == null
-                  ? "Select Date"
+                  ? ""
                   : DateFormat("dd MMM yyyy").format(_selectedDate!),
               style: GoogleFonts.poppins(
                 fontSize: 12,
@@ -399,7 +399,7 @@ class SessionsPageState extends State<SessionsPage> {
                 context: context,
                 barrierDismissible: false,
                 builder: (_) => SessionDetailsDialog(
-                  payment: item, // ✅ FIXED
+                  payment: item,
                   doctorId: widget.doctorId,
                   username: item.createdByDoctor.username,
                 ),
