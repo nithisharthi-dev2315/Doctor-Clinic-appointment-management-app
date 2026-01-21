@@ -617,12 +617,13 @@ import '../utils/ApiConstants.dart';
     }
   }
 
-  static const String authTokenUrl =
-      "https://srv1090011.hstgr.cloud/api/token/regenerate";
+  static const String authTokenUrl = "https://srv1090011.hstgr.cloud/api/token/regenerate";
 
-  static Future<TokenRefreshResponse> regenerateToken({
+  static Future<TokenRefreshResponse> regenerateToken(
+      {
     required String oldToken,
   }) async {
+    print('oldToken===========${oldToken}');
     final response = await http.post(
       Uri.parse(authTokenUrl),
       headers: {

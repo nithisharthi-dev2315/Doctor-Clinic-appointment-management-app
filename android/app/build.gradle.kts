@@ -9,9 +9,7 @@ if (keystorePropertiesFile.exists()) {
 
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
-    id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
+    id("com.google.gms.google-services") // Firebase
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -21,9 +19,11 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
+    // ✅ REQUIRED FOR flutter_local_notifications
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true   // ⭐ FIX
     }
 
     kotlinOptions {
@@ -40,7 +40,6 @@ android {
 
     signingConfigs {
         create("release") {
-
             val keyAliasProp = keystoreProperties.getProperty("keyAlias")
             val keyPasswordProp = keystoreProperties.getProperty("keyPassword")
             val storeFileProp = keystoreProperties.getProperty("storeFile")
@@ -69,6 +68,12 @@ android {
             isShrinkResources = false
         }
     }
+}
+
+dependencies {
+    // ✅ REQUIRED FOR DESUGARING
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
 }
 
 flutter {

@@ -350,8 +350,13 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
       final request = LoginRequest(username: username, password: password);
       final response = await LoginApi.login(request);
 
+      debugPrint("🔐 LOGIN API CALLED");
+      debugPrint("🔐 Username: $username");
+
       if (response.success) {
         final user = response.user;
+
+        // ✅ STORE VALUES
         await AppPreferences.setDoctorId(user.id);
         await AppPreferences.setUsername(user.username);
         await AppPreferences.setEmail(user.email);
@@ -360,24 +365,39 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
         await AppPreferences.setPassword(password);
         await AppPreferences.setLoggedIn(true);
 
+        // 🔍 VERIFY STORED VALUES
+        debugPrint("✅ LOGIN SUCCESS — STORED VALUES");
+        debugPrint("🆔 DoctorId: ${AppPreferences.getDoctorId()}");
+        debugPrint("👤 Username: ${AppPreferences.getUsername()}");
+        debugPrint("📧 Email: ${AppPreferences.getEmail()}");
+        debugPrint("📱 Mobile: ${AppPreferences.getMobile()}");
+        debugPrint("🎭 Role: ${AppPreferences.getRole()}");
+        debugPrint("🔐 IsLoggedIn: ${AppPreferences.isLoggedIn()}");
+
         _showSnack("Login successful", success: true);
 
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (_) => MainScreen(doctorId: user.id, user: user),
+            builder: (_) => MainScreen(
+              doctorId: user.id,
+              user: user,
+            ),
           ),
               (_) => false,
         );
       } else {
+        debugPrint("❌ LOGIN FAILED — API returned success=false");
         _showSnack("Login failed");
       }
     } catch (e) {
+      debugPrint("❌ LOGIN ERROR: $e");
       _showSnack("Invalid username or password");
     } finally {
       setState(() => isLoading = false);
     }
   }
+
 
 
   Future<void> _clinicLogin() async {

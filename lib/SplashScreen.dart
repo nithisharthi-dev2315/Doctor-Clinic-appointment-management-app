@@ -21,22 +21,35 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _checkAutoLogin() async {
+    debugPrint("🔐 AutoLogin check started...");
+
     await Future.delayed(const Duration(seconds: 3));
 
     final isLoggedIn = AppPreferences.isLoggedIn();
-
     final clinicId = AppPreferences.getClinicId();
     final doctorId = AppPreferences.getDoctorId();
-
     final username = AppPreferences.getUsername();
     final email = AppPreferences.getEmail();
     final mobile = AppPreferences.getMobile();
     final role = AppPreferences.getRole();
 
-    if (!mounted) return;
+    // 🔍 PRINT ALL VALUES
+    debugPrint("🔐 isLoggedIn: $isLoggedIn");
+    debugPrint("🏥 clinicId: $clinicId");
+    debugPrint("👨‍⚕️ doctorId: $doctorId");
+    debugPrint("👤 username: $username");
+    debugPrint("📧 email: $email");
+    debugPrint("📱 mobile: $mobile");
+    debugPrint("🎭 role: $role");
+
+    if (!mounted) {
+      debugPrint("❌ Widget not mounted, stopping auto-login");
+      return;
+    }
 
     if (isLoggedIn && clinicId.isNotEmpty && role == "clinic") {
-      /// 🏥 CLINIC LOGIN
+      debugPrint("✅ AUTO LOGIN AS CLINIC");
+
       final user = UserModel(
         id: clinicId,
         username: username,
@@ -58,7 +71,8 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     if (isLoggedIn && doctorId.isNotEmpty && role == "doctor") {
-      /// 👨‍⚕️ DOCTOR LOGIN
+      debugPrint("✅ AUTO LOGIN AS DOCTOR");
+
       final user = UserModel(
         id: doctorId,
         username: username,
@@ -79,7 +93,8 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
-    /// ❌ NOT LOGGED IN
+    debugPrint("❌ AUTO LOGIN FAILED → Redirecting to Login");
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

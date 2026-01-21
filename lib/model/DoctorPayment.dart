@@ -1,4 +1,7 @@
 // ======================= DOCTOR PAYMENT =======================
+import 'ConsentForm Model.dart';
+import 'Invoice Model.dart';
+
 class DoctorPaymentResponse {
   final bool success;
   final int count;
@@ -24,7 +27,7 @@ class DoctorPaymentResponse {
 class DoctorPayment {
   final String id;
   final String appointmentId;
-  final String session; // session object id
+  final String session;
   final DoctorAssigned doctorAssigned;
   final PackageSnapshot packageSnapshot;
   final List<SessionSlot> sessions;
@@ -34,6 +37,10 @@ class DoctorPayment {
   final Customer customer;
   final Appointment appointment;
   final CreatedByDoctor createdByDoctor;
+
+  // 🔥 ADD THESE
+  final ConsentForm consentForm;
+  final Invoice invoice;
 
   DoctorPayment({
     required this.id,
@@ -48,17 +55,20 @@ class DoctorPayment {
     required this.customer,
     required this.appointment,
     required this.createdByDoctor,
+
+    // 🔥 ADD THESE
+    required this.consentForm,
+    required this.invoice,
   });
+
 
   factory DoctorPayment.fromJson(Map<String, dynamic> json) {
     return DoctorPayment(
       id: json['_id'],
       appointmentId: json['appointmentId'],
       session: json['session'],
-      doctorAssigned:
-      DoctorAssigned.fromJson(json['doctorAssigned'] ?? {}),
-      packageSnapshot:
-      PackageSnapshot.fromJson(json['package_snapshot'] ?? {}),
+      doctorAssigned: DoctorAssigned.fromJson(json['doctorAssigned'] ?? {}),
+      packageSnapshot: PackageSnapshot.fromJson(json['package_snapshot'] ?? {}),
       sessions: (json['sessions'] as List? ?? [])
           .map((e) => SessionSlot.fromJson(e))
           .toList(),
@@ -69,8 +79,13 @@ class DoctorPayment {
       appointment: Appointment.fromJson(json['appointment'] ?? {}),
       createdByDoctor:
       CreatedByDoctor.fromJson(json['createdByDoctor'] ?? {}),
+
+      // ✅ NOW VALID
+      consentForm: ConsentForm.fromJson(json['consentForm']),
+      invoice: Invoice.fromJson(json['invoice']),
     );
   }
+
 }
 
 // ======================= DOCTOR ASSIGNED =======================

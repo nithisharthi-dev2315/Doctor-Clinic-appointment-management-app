@@ -65,4 +65,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'doctorclinic-352b1.firebasestorage.app',
     iosBundleId: 'com.example.Zeromedixine',
   );
+
 }

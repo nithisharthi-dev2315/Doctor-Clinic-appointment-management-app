@@ -419,20 +419,25 @@ class _EditSessionsDialogState extends State<EditSessionsDialog> {
       // 🔹 4. Return UPDATED DoctorPayment (DO NOT just return true)
       Navigator.pop(
         context,
-        DoctorPayment(
-          id: widget.payment.id,
-          appointmentId: widget.payment.appointmentId,
-          session: widget.payment.session,
-          doctorAssigned: widget.payment.doctorAssigned,
-          packageSnapshot: widget.payment.packageSnapshot,
-          sessions: updatedSessions,
-          status: widget.payment.status,
-          createdAt: widget.payment.createdAt,
-          updatedAt: DateTime.now(),
-          customer: widget.payment.customer,
-          appointment: widget.payment.appointment,
-          createdByDoctor: widget.payment.createdByDoctor,
-        ),
+          DoctorPayment(
+            id: widget.payment.id,
+            appointmentId: widget.payment.appointmentId,
+            session: widget.payment.session,
+            doctorAssigned: widget.payment.doctorAssigned,
+            packageSnapshot: widget.payment.packageSnapshot,
+            sessions: updatedSessions,
+            status: widget.payment.status,
+            createdAt: widget.payment.createdAt,
+            updatedAt: DateTime.now(),
+            customer: widget.payment.customer,
+            appointment: widget.payment.appointment,
+            createdByDoctor: widget.payment.createdByDoctor,
+
+            // ✅ REQUIRED FIELDS
+            consentForm: widget.payment.consentForm,
+            invoice: widget.payment.invoice,
+          )
+
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

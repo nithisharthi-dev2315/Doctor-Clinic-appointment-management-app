@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'AddEnquiryPage.dart';
 import 'Apiservice/appointment_api_service.dart';
@@ -448,6 +449,8 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
 
       if (response.statusCode == 200) {
         _showInvoiceSuccessDialog();
+        await loadSessions();
+        _showInvoiceSuccessDialog();
       } else {
         _showErrorDialog("Failed to send invoice");
       }
@@ -618,11 +621,10 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
                         context: context,
                         barrierDismissible: false,
                         builder: (_) => EditSessionsDialog(
-                          payment: payment, // 🔥 USE LOCAL STATE
+                          payment: payment,
                         ),
                       );
 
-                      // ✅ Update UI without closing SessionDetailsDialog
                       if (updatedPayment != null && mounted) {
                         setState(() {
                           payment = updatedPayment;
@@ -634,14 +636,41 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
                   ),
 
                   const SizedBox(width: 8),
+
+                  /// ✅ VIEW CONSENT (ONLY IF URL EXISTS)
+
+
+                  /// 🔥 INVOICE BUTTON (SMART)
                   _topActionButton(
-                    "Send Invoice",
-                    const Color(0xFFF97316),
+                    payment.hasInvoice ? "View Invoice" : "Send Invoice",
+                    payment.hasInvoice
+                        ? const Color(0xFF16A34A) // green
+                        : const Color(0xFFF97316), // orange
                     Colors.white,
-                    onTap: _sendInvoice,
+                    onTap: () {
+                      final url = payment.invoice.url;
+
+                      // 🔍 DEBUG
+                      debugPrint("🧾 Invoice URL: $url");
+                      debugPrint("🧾 Has Invoice: ${payment.hasInvoice}");
+
+                      if (payment.hasInvoice) {
+                        if (url != null && url.isNotEmpty && url.startsWith("http")) {
+                          debugPrint("✅ Opening invoice");
+                          _openInvoice(url);
+                        } else {
+                          debugPrint("❌ Invalid invoice URL");
+                          _showErrorDialog("Invoice link not available yet");
+                        }
+                      } else {
+                        debugPrint("📤 Sending invoice...");
+                        _sendInvoice();
+                      }
+                    },
                   ),
 
                   const SizedBox(width: 8),
+
                   _topActionButton(
                     "Close",
                     const Color(0xFF2563EB),
@@ -651,9 +680,12 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
                 ],
               ),
 
+
+
               const SizedBox(height: 20),
 
               // ================= SESSIONS =================
+
               Text(
                 "Scheduled Sessions",
                 style: GoogleFonts.poppins(
@@ -661,6 +693,65 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+
+              /// ================= CONSENT FORM =================
+              if (payment.hasConsent) ...[
+                const SizedBox(height: 12),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Consent Form",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      Text(
+                        "Patient consent document submitted",
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 40,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.description, size: 18),
+                          label: const Text("View Consent"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: () {
+                            _openInvoice(payment.consentForm.url!);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
 
               const SizedBox(height: 10),
 
@@ -733,13 +824,15 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
                                         session: payment.session,
                                         doctorAssigned: payment.doctorAssigned,
                                         packageSnapshot: payment.packageSnapshot,
-                                        sessions: updatedSessions,       // ✅ NEW LIST
+                                        sessions: updatedSessions,
                                         status: payment.status,
                                         createdAt: payment.createdAt,
                                         updatedAt: DateTime.now(),
                                         customer: payment.customer,
                                         appointment: payment.appointment,
                                         createdByDoctor: payment.createdByDoctor,
+                                        consentForm: payment.consentForm,
+                                        invoice: payment.invoice,
                                       );
 
                                       enquiryExpanded[index] = true;
@@ -1209,6 +1302,23 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
     );
   }
 
+  Future<void> _openInvoice(String url) async {
+    try {
+      debugPrint("🌐 Opening invoice URL: $url");
+
+      final uri = Uri.parse(url);
+
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication, // ✅ Opens Chrome / Browser
+      );
+    } catch (e) {
+      debugPrint("❌ Invoice launch failed: $e");
+      _showErrorDialog("Unable to open invoice");
+    }
+  }
+
+
 
 
 
@@ -1281,6 +1391,15 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
   }
 
 
+}
+
+extension InvoiceHelpers on DoctorPayment {
+  bool get hasInvoice => invoice.url != null && invoice.url!.isNotEmpty;
+}
+
+extension ConsentHelpers on DoctorPayment {
+  bool get hasConsent =>
+      consentForm.url != null && consentForm.url!.trim().isNotEmpty;
 }
 
 class _RoomCache {

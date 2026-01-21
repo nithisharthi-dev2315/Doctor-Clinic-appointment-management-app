@@ -32,7 +32,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-enum DateFilterType { today, upcoming, custom }
+enum DateFilterType { today, upcoming, past, custom }
 
 class _HomePageState extends State<HomePage> {
   DateFilterType _filterType = DateFilterType.today;
@@ -371,76 +371,50 @@ class _HomePageState extends State<HomePage> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    logFilter("----- CLINIC FILTER START -----");
-    logFilter("FilterType=$_filterType");
-    logFilter("SelectedDate=$_selectedDate");
-    logFilter("Today(Local)=$today");
-    logFilter("Total From API=${list.length}");
-
-
-
     final filtered = list.where((p) {
       if (p.treatmentDate == null) return false;
 
-      /// 🔥 UTC → LOCAL
       final localDateTime = p.treatmentDate!.toLocal();
-
-      /// 🔹 Date-only
       final treatmentDay = DateTime(
         localDateTime.year,
         localDateTime.month,
         localDateTime.day,
       );
 
-      bool match = false;
-
       switch (_filterType) {
         case DateFilterType.today:
-          match = treatmentDay == today;
-          break;
+          return treatmentDay == today;
 
         case DateFilterType.upcoming:
-          match = treatmentDay.isAfter(today) ||
-              treatmentDay.isAtSameMomentAs(today);
-          break;
+          return treatmentDay.isAtSameMomentAs(today) ||
+              treatmentDay.isAfter(today);
+
+        case DateFilterType.past:
+          return treatmentDay.isBefore(today);
 
         case DateFilterType.custom:
           if (_selectedDate == null) return true;
-
           final selectedDay = DateTime(
             _selectedDate!.year,
             _selectedDate!.month,
             _selectedDate!.day,
           );
-
-          match = treatmentDay == selectedDay;
-          break;
+          return treatmentDay == selectedDay;
       }
-
-      logFilter(
-        "CHECK → ${p.name} | "
-            "API=${p.treatmentDate} | "
-            "Local=$localDateTime | "
-            "Match=$match",
-      );
-
-      return match;
     }).toList();
 
-    /// ✅ Sort by DATE then TIME
+    /// Sort by date + time
     filtered.sort((a, b) {
       final d1 = a.treatmentDate!.toLocal();
       final d2 = b.treatmentDate!.toLocal();
-
       final dateCompare = d1.compareTo(d2);
       if (dateCompare != 0) return dateCompare;
-
       return a.treatmentTime.compareTo(b.treatmentTime);
     });
 
-    logFilter("FINAL COUNT=${filtered.length}");
     return filtered;
   }
+
 
 
 
@@ -633,128 +607,144 @@ class _HomePageState extends State<HomePage> {
 
   Widget _filterBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      color: Colors.white,
-      child: Row(
-        children: [
-          _filterChip("Today", DateFilterType.today),
-          const SizedBox(width: 10),
-          _filterChip("Upcoming", DateFilterType.upcoming),
-          const Spacer(),
-          InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () async {
-              final DateTime yesterday =
-              DateTime.now().subtract(const Duration(days: 1));
-
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: yesterday,
-                firstDate: DateTime(2000),
-                lastDate: yesterday,
-                builder: (context, child) {
-                  return Theme(
-                    data: Theme.of(context).copyWith(
-                      colorScheme: const ColorScheme.light(
-                        primary: Colors.blue,
-                        onPrimary: Colors.white,
-                        onSurface: Colors.black,
-                      ),
-
-                      textButtonTheme: TextButtonThemeData(
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.blue,
-                          textStyle: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-
-
-                      datePickerTheme: const DatePickerThemeData(
-                        backgroundColor: Colors.white,
-                        todayForegroundColor:
-                        MaterialStatePropertyAll(Colors.grey),
-                        todayBackgroundColor:
-                        MaterialStatePropertyAll(Colors.transparent),
-                      ), dialogTheme: DialogThemeData(backgroundColor: Colors.white),
-                    ),
-                    child: child!,
-                  );
-                },
-              );
-
-
-              if (picked != null) {
-                setState(() {
-                  _filterType = DateFilterType.custom;
-                  _selectedDate = picked;
-                });
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_today_outlined,
-                    size: 16,
-                    color: Color(0xFF2563EB),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    _selectedDate == null
-                        ? "Past Date"
-                        : _formatDate(_selectedDate!),
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF2563EB),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              _filterChip("Today", DateFilterType.today),
+              const SizedBox(width: 8),
+              _filterChip("Upcoming", DateFilterType.upcoming),
+              const SizedBox(width: 8),
+              _filterChip("Past", DateFilterType.past),
+              const SizedBox(width: 8),
+              _datePickerButton(context),
+            ],
+          ),
+        ),
+      ),
     );
   }
+
+  Widget _datePickerButton(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () async {
+        final yesterday =
+        DateTime.now().subtract(const Duration(days: 1));
+
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: yesterday,
+          firstDate: DateTime(2000),
+          lastDate: yesterday,
+          builder: (context, child) {
+            return Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: const ColorScheme.light(
+                  primary: Color(0xFF2563EB),
+                  onPrimary: Colors.white,
+                  onSurface: Colors.black,
+                ),
+                dialogTheme: const DialogThemeData(
+                  backgroundColor: Colors.white,
+                ),
+
+              ),
+              child: child!,
+            );
+          },
+        );
+
+        if (picked != null) {
+          setState(() {
+            _filterType = DateFilterType.custom;
+            _selectedDate = picked;
+          });
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFBFDBFE)),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.calendar_today_rounded,
+              size: 16,
+              color: Color(0xFF2563EB),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _selectedDate == null
+                  ? ""
+                  : _formatDate(_selectedDate!),
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF2563EB),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _filterChip(String label, DateFilterType type) {
     final selected = _filterType == type;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(18),
       onTap: () {
         setState(() {
           _filterType = type;
           _selectedDate = null;
         });
-        logFilter("FILTER CHIP CLICKED → $_filterType");
-
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(20),
+          color: selected
+              ? const Color(0xFF2563EB)
+              : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected
+                ? const Color(0xFF2563EB)
+                : const Color(0xFFE2E8F0),
+          ),
         ),
         child: Text(
           label,
           style: GoogleFonts.poppins(
             fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: selected ? Colors.white : const Color(0xFF64748B),
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : const Color(0xFF475569),
           ),
         ),
       ),
     );
   }
+
 
   List<Appointment> _applyDateFilter(List<Appointment> list) {
     final now = DateTime.now();
@@ -772,6 +762,8 @@ class _HomePageState extends State<HomePage> {
           return apptDay.isAtSameMomentAs(today) ||
               apptDay.isAfter(today);
 
+        case DateFilterType.past:
+          return apptDay.isBefore(today);
 
         case DateFilterType.custom:
           if (_selectedDate == null) return true;
@@ -781,6 +773,7 @@ class _HomePageState extends State<HomePage> {
       }
     }).toList();
   }
+
 
   String _formatDate(DateTime date) {
     return "${date.day.toString().padLeft(2, '0')}/"

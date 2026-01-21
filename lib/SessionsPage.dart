@@ -9,7 +9,7 @@ import 'Apiservice/appointment_api_service.dart';
 import 'SessionDetailsDialog.dart';
 import 'model/DoctorPayment.dart';
 
-enum DateFilterType { today, upcoming, custom }
+enum DateFilterType { today, upcoming, past, custom }
 
 
 class SessionsPage extends StatefulWidget {
@@ -99,14 +99,24 @@ class SessionsPageState extends State<SessionsPage> {
       if (sessionDate == null) return false;
 
       switch (_filterType) {
+
+      /// 🔹 TODAY
         case DateFilterType.today:
           return sessionDate.year == now.year &&
               sessionDate.month == now.month &&
               sessionDate.day == now.day;
 
+      /// 🔹 UPCOMING (after now)
         case DateFilterType.upcoming:
           return sessionDate.isAfter(now);
 
+      /// 🔹 PAST (before today)
+        case DateFilterType.past:
+          return sessionDate.isBefore(
+            DateTime(now.year, now.month, now.day),
+          );
+
+      /// 🔹 CUSTOM PAST DATE
         case DateFilterType.custom:
           if (_selectedDate == null) return false;
           return sessionDate.year == _selectedDate!.year &&
@@ -121,7 +131,10 @@ class SessionsPageState extends State<SessionsPage> {
       final bDate = _getSessionDate(b)!;
       return aDate.compareTo(bDate);
     });
+
+    setState(() {});
   }
+
 
   // =========================
   // 🔹 STATUS HELPERS
@@ -186,16 +199,32 @@ class SessionsPageState extends State<SessionsPage> {
   // =========================
   Widget _filterBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      color: Colors.white,
-      child: Row(
-        children: [
-          _filterChip("Today", DateFilterType.today),
-          const SizedBox(width: 10),
-          _filterChip("Upcoming", DateFilterType.upcoming),
-          const Spacer(),
-          _pastDatePicker(context),
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _filterChip("Today", DateFilterType.today),
+            const SizedBox(width: 8),
+            _filterChip("Upcoming", DateFilterType.upcoming),
+            const SizedBox(width: 8),
+            _filterChip("Past", DateFilterType.past),
+            const SizedBox(width: 12),
+            _pastDatePicker(context),
+          ],
+        ),
       ),
     );
   }
@@ -212,29 +241,36 @@ class SessionsPageState extends State<SessionsPage> {
           _applyFilter();
         });
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
-          color: selected
-              ? const Color(0xFF2563EB)
-              : const Color(0xFFF1F5F9),
+          color: selected ? const Color(0xFF2563EB) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected
+                ? const Color(0xFF2563EB)
+                : const Color(0xFFE2E8F0),
+          ),
         ),
         child: Text(
           label,
           style: GoogleFonts.poppins(
             fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: selected ? Colors.white : const Color(0xFF64748B),
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : const Color(0xFF475569),
           ),
         ),
       ),
     );
   }
 
+
   Widget _pastDatePicker(BuildContext context) {
+    final isSelected = _filterType == DateFilterType.custom;
+
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(20),
       onTap: () async {
         final yesterday = DateTime.now().subtract(const Duration(days: 1));
 
@@ -253,27 +289,33 @@ class SessionsPageState extends State<SessionsPage> {
           });
         }
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(10),
+          color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF2563EB)
+                : const Color(0xFFE2E8F0),
+          ),
         ),
         child: Row(
           children: [
-            const Icon(
-              Icons.calendar_today_outlined,
+            Icon(
+              Icons.calendar_today_rounded,
               size: 16,
-              color: Color(0xFF2563EB),
+              color: const Color(0xFF2563EB),
             ),
             const SizedBox(width: 6),
             Text(
               _selectedDate == null
-                  ? "Past Date"
+                  ? "Select Date"
                   : DateFormat("dd MMM yyyy").format(_selectedDate!),
               style: GoogleFonts.poppins(
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: const Color(0xFF2563EB),
               ),
             ),
@@ -282,6 +324,7 @@ class SessionsPageState extends State<SessionsPage> {
       ),
     );
   }
+
 
   // =========================
   // 🔹 SESSIONS LIST
