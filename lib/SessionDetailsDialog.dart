@@ -684,17 +684,7 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
 
               const SizedBox(height: 20),
 
-              // ================= SESSIONS =================
 
-              Text(
-                "Scheduled Sessions",
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              /// ================= CONSENT FORM =================
               if (payment.hasConsent) ...[
                 const SizedBox(height: 12),
 
@@ -751,6 +741,19 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
                   ),
                 ),
               ],
+
+              // ================= SESSIONS =================
+
+              Text(
+                "Scheduled Sessions",
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+
+              /// ================= CONSENT FORM =================
+
 
 
               const SizedBox(height: 10),
@@ -1247,16 +1250,26 @@ class _SessionDetailsDialogState extends State<SessionDetailsDialog> {
     );
   }
   void _openWebView(String url) {
+    final uri = Uri.parse(url);
+
+    final newUri = uri.replace(
+      queryParameters: {
+        ...uri.queryParameters,
+        "platform": "app",
+      },
+    );
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => CommonWebViewPage(
-          url: url,
+          url: newUri.toString(),
           title: "Video Consultation",
         ),
       ),
     );
   }
+
   Widget _doctorDropdown(int index) {
     return Container(
       height: 44,

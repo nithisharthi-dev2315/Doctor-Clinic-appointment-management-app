@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "667157311654",
-    "project_id": "doctorclinic-352b1",
-    "storage_bucket": "doctorclinic-352b1.firebasestorage.app"
+    "project_number": "880038340902",
+    "project_id": "zeromedixine-76219",
+    "storage_bucket": "zeromedixine-76219.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:667157311654:android:cdab4dce935c20a33e4467",
+        "mobilesdk_app_id": "1:880038340902:android:d2bbb4a645d7e3c5f339e7",
         "android_client_info": {
-          "package_name": "com.example.Zeromedixine"
+          "package_name": "com.zeromedixine.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAnCORns0iKSUKTTpNPdLUxAApUzG-gVu4"
+          "current_key": "AIzaSyBvTl6CrW8hpdi9gLIwagAsOtX_XPBFL3k"
         }
       ],
       "services": {

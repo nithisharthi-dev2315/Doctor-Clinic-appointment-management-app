@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -49,21 +40,50 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAnCORns0iKSUKTTpNPdLUxAApUzG-gVu4',
-    appId: '1:667157311654:android:cdab4dce935c20a33e4467',
-    messagingSenderId: '667157311654',
-    projectId: 'doctorclinic-352b1',
-    storageBucket: 'doctorclinic-352b1.firebasestorage.app',
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBg2vdI5AzAQ9F7r7mKO73arsOTm9ncZtY',
+    appId: '1:880038340902:web:817153310d6bc671f339e7',
+    messagingSenderId: '880038340902',
+    projectId: 'zeromedixine-76219',
+    authDomain: 'zeromedixine-76219.firebaseapp.com',
+    storageBucket: 'zeromedixine-76219.firebasestorage.app',
+    measurementId: 'G-X16X05GEJ4',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBg2vdI5AzAQ9F7r7mKO73arsOTm9ncZtY',
+    appId: '1:880038340902:web:817153310d6bc671f339e7',
+    messagingSenderId: '880038340902',
+    projectId: 'zeromedixine-76219',
+    authDomain: 'zeromedixine-76219.firebaseapp.com',
+    storageBucket: 'zeromedixine-76219.firebasestorage.app',
+    measurementId: 'G-X16X05GEJ4',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyCwV_C5EBSW-5ojHO2aC53xLo13KVji1SA',
+    appId: '1:880038340902:ios:b323d5e70474f329f339e7',
+    messagingSenderId: '880038340902',
+    projectId: 'zeromedixine-76219',
+    storageBucket: 'zeromedixine-76219.firebasestorage.app',
+    iosBundleId: 'com.zeromedixine.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDyQs0CONRcBnja6TB02EwViKirSQlXThk',
-    appId: '1:667157311654:ios:5525c8b7f080d3cc3e4467',
-    messagingSenderId: '667157311654',
-    projectId: 'doctorclinic-352b1',
-    storageBucket: 'doctorclinic-352b1.firebasestorage.app',
-    iosBundleId: 'com.example.Zeromedixine',
+    apiKey: 'AIzaSyCwV_C5EBSW-5ojHO2aC53xLo13KVji1SA',
+    appId: '1:880038340902:ios:b323d5e70474f329f339e7',
+    messagingSenderId: '880038340902',
+    projectId: 'zeromedixine-76219',
+    storageBucket: 'zeromedixine-76219.firebasestorage.app',
+    iosBundleId: 'com.zeromedixine.app',
+  );
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyBvTl6CrW8hpdi9gLIwagAsOtX_XPBFL3k',
+    appId: '1:880038340902:android:d2bbb4a645d7e3c5f339e7',
+    messagingSenderId: '880038340902',
+    projectId: 'zeromedixine-76219',
+    storageBucket: 'zeromedixine-76219.firebasestorage.app',
   );
 
 }

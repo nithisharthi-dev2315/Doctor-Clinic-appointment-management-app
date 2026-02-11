@@ -329,7 +329,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
     return DropdownButtonFormField<ConcernModel>(
       value: selectedConcern,
-
+      dropdownColor: Colors.white,
       hint: Text(
         "Select your primary concern",
         style: GoogleFonts.poppins(
@@ -583,26 +583,31 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: isSubmitting
-                        ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                        :  Text(
-                      widget.isClinic ? "Submit" : "Submit Appointment",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: isSubmitting
+                          ? const SizedBox(
+                        key: ValueKey("loading"),
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                          : Text(
+                        widget.isClinic ? "Submit" : "Submit Appointment",
+                        key: const ValueKey("text"),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-
                   ),
                 ),
+
 
               ],
             ),
@@ -615,7 +620,9 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
   /// ---------------- SUBMIT ----------------
 
-  void _onSubmit() {
+  Future<void> _onSubmit() async {
+    if (isSubmitting) return; // 🛑 BLOCK DOUBLE CLICK IMMEDIATELY
+
     final valid = _formKey.currentState!.validate();
 
     setState(() {
@@ -636,28 +643,35 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       return;
     }
 
-    /// ✅ CLINIC FLOW
-    if (widget.isClinic) {
-      submitClinicPatient();
-    }
-    /// ✅ DOCTOR FLOW (UNCHANGED)
-    else {
-      submitAppointment();
+    setState(() => isSubmitting = true); // ✅ SHOW LOADER IMMEDIATELY
+
+    try {
+      /// ✅ CLINIC FLOW
+      if (widget.isClinic) {
+        await submitClinicPatient();
+      }
+      /// ✅ DOCTOR FLOW
+      else {
+        await submitAppointment();
+      }
+    } catch (e) {
+      debugPrint("Submit error: $e");
+    } finally {
+      if (mounted) {
+        setState(() => isSubmitting = false); // ✅ RE-ENABLE BUTTON
+      }
     }
   }
 
 
   Future<void> submitAppointment() async {
     if (selectedConcern == null) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            "Please select primary concern",
-            style: TextStyle(color: Colors.white),
-          ),
+        const SnackBar(
+          content: Text("Please select primary concern"),
           backgroundColor: Color(0xFF0D9488),
-          behavior: SnackBarBehavior.floating,
-          elevation: 4,
         ),
       );
       return;
@@ -667,12 +681,12 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       name: nameController.text.trim(),
       age: int.parse(ageController.text.trim()),
       gender: gender!,
-      phone: phoneController.text.trim(),
+      phone: getNumericPhoneWithCountryCode(),
       email: emailController.text.trim(),
       primaryConcern: selectedConcern!.concern,
       date: DateFormat("yyyy-MM-dd").format(selectedDate!),
       time: convertTo24Hour(selectedTime!),
-      whatsAppOptIn: false,
+      whatsAppOptIn: true,
       language: language!,
       couponCode:
       couponController.text.trim().isEmpty ? null : couponController.text,
@@ -680,53 +694,36 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       doctorUsername: widget.doctorUsername,
     );
 
-    // 🔍 DEBUG PRINT
-    debugPrint("REQUEST DATA:");
-    debugPrint(request.toJson().toString());
+    debugPrint("📤 APPOINTMENT REQUEST:");
+    request.toJson().forEach((k, v) => debugPrint("$k : $v"));
 
     try {
-      final response =
       await AppointmentApiService.createAppointment(request);
 
-      print('response+++++$response');
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            " Appointment added successfully",
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+        const SnackBar(
+          content: Text("Appointment added successfully"),
           backgroundColor: Color(0xFF0D9488),
-          behavior: SnackBarBehavior.floating,
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
         ),
       );
-
 
       Navigator.pop(context, true);
     } catch (e) {
       debugPrint("API ERROR: $e");
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            "Something went wrong",
-            style: TextStyle(color: Colors.white),
-          ),
-          backgroundColor: const Color(0xFF0D9488), // ✅ updated color (teal)
-          behavior: SnackBarBehavior.floating,
-          elevation: 4,
+        const SnackBar(
+          content: Text("Something went wrong"),
+          backgroundColor: Color(0xFF0D9488),
         ),
       );
     }
-
   }
+
 
   Future<void> submitClinicPatient() async {
     setState(() => isSubmitting = true);
@@ -796,6 +793,17 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     final minute = time.minute.toString().padLeft(2, '0');
     return "$hour:$minute";
   }
+
+  String getNumericPhoneWithCountryCode() {
+    final String numericCountryCode =
+    selectedDialCode.replaceAll(RegExp(r'\D'), '');
+
+    final String numericMobile =
+    phoneController.text.replaceAll(RegExp(r'\D'), '');
+
+    return "$numericCountryCode$numericMobile";
+  }
+
 
 
   Widget _phoneFieldWithCountryCode() {
@@ -1094,7 +1102,8 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       validator: validator,
       onChanged: onChanged,
 
-      // 🔹 Hint text
+      dropdownColor: Colors.white,
+
       hint: Text(
         hint,
         style: GoogleFonts.poppins(
@@ -1227,7 +1236,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
           const Spacer(),
           Icon(
             icon,
-            size: 18, // 🔽 smaller icon
+            size: 18,
             color: Colors.grey[700],
           ),
         ],

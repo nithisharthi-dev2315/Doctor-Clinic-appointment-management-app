@@ -334,7 +334,8 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
   bool hidePassword = true;
   bool isLoading = false;
 
-  // 🔐 LOGIN LOGIC (UNCHANGED)
+
+
   Future<void> _login() async {
     final username = usernameController.text.trim();
     final password = passwordController.text.trim();
@@ -356,7 +357,6 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
       if (response.success) {
         final user = response.user;
 
-        // ✅ STORE VALUES
         await AppPreferences.setDoctorId(user.id);
         await AppPreferences.setUsername(user.username);
         await AppPreferences.setEmail(user.email);
@@ -364,8 +364,8 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
         await AppPreferences.setRole(user.role);
         await AppPreferences.setPassword(password);
         await AppPreferences.setLoggedIn(true);
+        await TokenManager.saveToken(response.token);
 
-        // 🔍 VERIFY STORED VALUES
         debugPrint("✅ LOGIN SUCCESS — STORED VALUES");
         debugPrint("🆔 DoctorId: ${AppPreferences.getDoctorId()}");
         debugPrint("👤 Username: ${AppPreferences.getUsername()}");
@@ -373,6 +373,7 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
         debugPrint("📱 Mobile: ${AppPreferences.getMobile()}");
         debugPrint("🎭 Role: ${AppPreferences.getRole()}");
         debugPrint("🔐 IsLoggedIn: ${AppPreferences.isLoggedIn()}");
+        debugPrint("🔐 AccesstokenDocter: ${AppPreferences.getAccessToken()}");
 
         _showSnack("Login successful", success: true);
 
@@ -397,7 +398,6 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
       setState(() => isLoading = false);
     }
   }
-
 
 
   Future<void> _clinicLogin() async {

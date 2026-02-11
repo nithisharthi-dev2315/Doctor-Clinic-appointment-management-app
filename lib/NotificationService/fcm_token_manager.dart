@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart';
 
 class FcmTokenManager {
   FcmTokenManager._();
-
-  /// Call this ONCE after Firebase.initializeApp()
   static void init() {
     // ✅ MOST IMPORTANT: Listen for token creation & refresh
     FirebaseMessaging.instance.onTokenRefresh.listen((token) {
@@ -15,7 +13,6 @@ class FcmTokenManager {
       // ApiService.saveFcmToken(token);
     });
 
-    // 🔹 Optional: Try to get token once (non-blocking)
     _tryGetInitialToken();
   }
 

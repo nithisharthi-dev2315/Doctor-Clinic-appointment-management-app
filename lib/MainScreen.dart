@@ -58,12 +58,20 @@ class _MainScreenState extends State<MainScreen> {
           username: widget.user.username,
           isClinic: true,
           onGoToInvoiceTab: () {
-            setState(() => _currentIndex = 1);
-            _invoiceTabKey.currentState?.reloadInvoices();
+            debugPrint('➡️ Switching to Invoice Tab');
 
+            setState(() => _currentIndex = 1);
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              debugPrint('🔄 Reloading invoices');
+              _invoiceTabKey.currentState?.reloadInvoices();
+            });
           },
+
+
         ),
-        ClinicInvoiceTab(doctorId: widget.doctorId),
+        ClinicInvoiceTab(  key: _invoiceTabKey, // ✅ REQUIRED
+            doctorId: widget.doctorId),
         ProfilePage(user: widget.user),
       ];
     } else {

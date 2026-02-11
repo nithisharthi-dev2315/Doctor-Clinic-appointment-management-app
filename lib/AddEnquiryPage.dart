@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import 'Apiservice/appointment_api_service.dart';
 import 'model/EnquiryRequest.dart';
@@ -23,7 +24,95 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
   final TextEditingController chiefController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
 
+
+  late stt.SpeechToText _speech;
+  bool isListening = false;
+  TextEditingController? activeController;
   bool isLoading = false;
+
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = stt.SpeechToText();
+  }
+
+
+  Future<void> _startListening(TextEditingController controller) async {
+    activeController = controller;
+
+    try {
+      bool available = await _speech.initialize(
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            _stopListening();
+          }
+        },
+        onError: (error) {
+          _toast("Speech error: ${error.errorMsg}");
+          _stopListening();
+        },
+      );
+
+      if (!available) {
+        _toast("Speech recognition not available");
+        return;
+      }
+
+      setState(() => isListening = true);
+
+      _speech.listen(
+        localeId: 'en_IN', // change to ta_IN if needed
+        onResult: (result) {
+          setState(() {
+            controller.text = result.recognizedWords;
+          });
+        },
+      );
+    } catch (e) {
+      _toast("Speech init failed");
+    }
+  }
+
+
+  void _stopListening() {
+    if (_speech.isListening) {
+      _speech.stop();
+    }
+    setState(() => isListening = false);
+  }
+
+
+  Widget _actionRow(TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          OutlinedButton.icon(
+            onPressed: () {
+              isListening ? _stopListening() : _startListening(controller);
+            },
+            icon: Icon(
+              isListening ? Icons.stop : Icons.mic,
+              size: 18,
+            ),
+            label: Text(isListening ? "Stop" : "Record"),
+          ),
+          const SizedBox(width: 10),
+          OutlinedButton.icon(
+            onPressed: () {
+              _toast("Summarize coming soon");
+            },
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text("Summarize"),
+          ),
+        ],
+      ),
+    );
+  }
+
+
 
   Future<void> _submitEnquiry() async {
     if (chiefController.text.trim().isEmpty) {
@@ -96,6 +185,7 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
                     child: Icon(Icons.close, size: 22),
                   ),
                 )
+
               ],
             ),
 
@@ -104,22 +194,33 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
             /// ───── CHIEF COMPLAINT ─────
             _section(
               title: "Chief Complaints",
-              child: _inputField(
-                controller: chiefController,
-                hint: "Describe the patient's main issue",
-                maxLines: 4,
+              child: Column(
+                children: [
+                  _inputField(
+                    controller: chiefController,
+                    hint: "Describe the patient's main issue",
+                    maxLines: 4,
+                  ),
+                  _actionRow(chiefController),
+                ],
               ),
             ),
+
 
             const SizedBox(height: 16),
 
             /// ───── NOTES ─────
             _section(
               title: "Doctor Notes (Optional)",
-              child: _inputField(
-                controller: notesController,
-                hint: "Additional observations or notes",
-                maxLines: 3,
+              child: Column(
+                children: [
+                  _inputField(
+                    controller: notesController,
+                    hint: "Additional observations or notes",
+                    maxLines: 3,
+                  ),
+                  _actionRow(notesController),
+                ],
               ),
             ),
 
@@ -240,6 +341,7 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
 
   @override
   void dispose() {
+    _speech.stop();
     chiefController.dispose();
     notesController.dispose();
     super.dispose();

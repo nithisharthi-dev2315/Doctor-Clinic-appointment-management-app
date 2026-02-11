@@ -26,24 +26,60 @@ import '../utils/ApiConstants.dart';
 
 
   class AppointmentApiService {
-  static Future<AppointmentResponseAdd> createAppointment(
-      AppointmentRequest request) async {
+    static Future<AppointmentResponseAdd> createAppointment(
+        AppointmentRequest request,
+        ) async {
+      final token = await AppPreferences.getAccessToken();
 
-    final response = await http.post(
-      Uri.parse(ApiConstants.createAppointment),
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode(request.toJson()),
-    );
+      final uri = Uri.parse(ApiConstants.createAppointment);
+      final body = jsonEncode(request.toJson());
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final json = jsonDecode(response.body);
-      return AppointmentResponseAdd.fromJson(json);
-    } else {
-      throw Exception("Failed to create appointment");
+      debugPrint("📤 CREATE APPOINTMENT REQUEST");
+      debugPrint("URL    : $uri");
+      debugPrint("TOKEN  : ${token != null ? "YES" : "NO"}");
+      debugPrint("BODY   : $body");
+
+      final response = await http.post(
+        uri,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: body,
+      );
+
+      debugPrint("📥 CREATE APPOINTMENT RESPONSE");
+      debugPrint("STATUS : ${response.statusCode}");
+      debugPrint("BODY   : ${response.body}");
+
+      /// ✅ SUCCESS
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        return AppointmentResponseAdd.fromJson(json);
+      }
+
+      /// ❌ UNAUTHORIZED
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw Exception("Unauthorized. Please login again.");
+      }
+
+      /// ❌ BAD REQUEST (validation error)
+      if (response.statusCode == 400) {
+        try {
+          final json = jsonDecode(response.body);
+          final message = json['message'] ?? "Invalid request";
+          throw Exception(message);
+        } catch (_) {
+          throw Exception("Invalid request");
+        }
+      }
+
+      /// ❌ OTHER ERRORS
+      throw Exception(
+        "Failed to create appointment (${response.statusCode})",
+      );
     }
-  }
+
 
   static Future<List<ConcernModel>> getConcerns() async {
     final response = await http.get(

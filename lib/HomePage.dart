@@ -16,7 +16,7 @@ class HomePage extends StatefulWidget {
   final String doctorId;
   final String username;
   final bool isClinic;
-  final VoidCallback onGoToInvoiceTab; // ✅ ADD
+  final VoidCallback onGoToInvoiceTab;
 
   const HomePage({
     super.key,
@@ -440,8 +440,8 @@ class _HomePageState extends State<HomePage> {
         );
 
         if (result == "go_to_invoice_tab") {
-          _onRefresh();              // refresh if needed
-          widget.onGoToInvoiceTab(); // ✅ change bottom tab
+        //  _onRefresh();
+          widget.onGoToInvoiceTab();
         }
       },
 
@@ -939,17 +939,40 @@ class AppointmentCard extends StatelessWidget {
                 width: double.infinity,
                 height: 46,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async {
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => CommonWebViewPage(
-                          url: appointment.videoLink!,
-                          title: "Video Consultation",
-                        ),
+                        builder: (_) {
+                          final uri = Uri.parse(appointment.videoLink!);
+
+                          final newUri = uri.replace(
+                            queryParameters: {
+                              ...uri.queryParameters,
+                              "platform": "app",
+                            },
+                          );
+
+                          debugPrint("🔗 FINAL VIDEO URL: ${newUri.toString()}");
+
+                          return CommonWebViewPage(
+                            url: newUri.toString(),
+                            title: "Video Consultation",
+                          );
+                        },
                       ),
                     );
+                    if (result == "call_ended" || result == true) {
+                      debugPrint("📞 Call ended → reload doctor list");
+
+                      if (context.mounted) {
+                        final homeState =
+                        context.findAncestorStateOfType<_HomePageState>();
+                        homeState?._onRefresh();
+                      }
+                    }
                   },
+
                   icon: const Icon(Icons.video_call, size: 20),
                   label: Text(
                     "Join Video Consultation",

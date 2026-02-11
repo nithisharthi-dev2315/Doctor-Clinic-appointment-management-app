@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'DoctorLoginPage.dart';
+import 'TermsWebViewPage.dart';
 import 'privacy_policy_screen.dart';
 
 enum LoginType { doctor, clinic }
@@ -51,7 +52,6 @@ class LoginEntryPage extends StatelessWidget {
                   children: [
                     const SizedBox(height: 20),
 
-                    /// 📝 TITLE
                     Text(
                       "Get Started",
                       textAlign: TextAlign.center,
@@ -168,7 +168,7 @@ class LoginEntryPage extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (_) =>
-                            const PrivacyPolicyScreen(),
+                            const TermsWebViewPage(),
                           ),
                         );
                       },

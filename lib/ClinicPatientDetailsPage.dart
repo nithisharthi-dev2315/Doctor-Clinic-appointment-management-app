@@ -213,7 +213,8 @@ class ClinicPatientDetailsPage extends StatelessWidget {
     BuildContext context,
     String patientId,
     String doctorId,
-  ) {
+  )
+  {
     showDialog(
       context: context,
       barrierDismissible: false,

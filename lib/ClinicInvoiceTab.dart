@@ -13,6 +13,7 @@ import 'HomePage.dart';
 import 'model/patient_invoice_item.dart';
 
 class ClinicInvoiceTab extends StatefulWidget {
+
   final String doctorId;
   final bool showSuccess;
 
@@ -40,6 +41,7 @@ class ClinicInvoiceTabState extends State<ClinicInvoiceTab> {
     _loadInvoices();
   }
   Future<void> reloadInvoices() async {
+    debugPrint('📄 reloadInvoices called');
     await _loadInvoices();
   }
 
@@ -140,18 +142,19 @@ class ClinicInvoiceTabState extends State<ClinicInvoiceTab> {
           if (result == true) {
             _loadInvoices();
           }
+
         },
       ),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : invoices.isEmpty
+            ? Center(
+          child: Text(
+            "No invoices found",
+            style: GoogleFonts.poppins(),
+          ),
+        )
 
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : invoices.isEmpty
-          ? Center(
-        child: Text(
-          "No invoices found",
-          style: GoogleFonts.poppins(),
-        ),
-      )
           : RefreshIndicator(
         onRefresh: _loadInvoices,
         child: ListView.builder(
