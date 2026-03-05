@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'LoginEntryPage.dart';
 import 'MainScreen.dart';
+import 'NotificationService/fcm_token_manager.dart';
 import 'Preferences/AppPreferences.dart';
 import 'api/user_model.dart';
 
@@ -47,7 +48,8 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
-    if (isLoggedIn && clinicId.isNotEmpty && role == "clinic") {
+    if (isLoggedIn && clinicId.isNotEmpty && role == "clinic")
+    {
       debugPrint("✅ AUTO LOGIN AS CLINIC");
 
       final user = UserModel(
@@ -57,6 +59,13 @@ class _SplashScreenState extends State<SplashScreen> {
         mobileNo: mobile,
         role: role,
       );
+
+      FcmTokenManager.init(
+        userId:clinicId,
+        role: role,
+        clinicId: null,
+      );
+
 
       Navigator.pushReplacement(
         context,
@@ -80,6 +89,13 @@ class _SplashScreenState extends State<SplashScreen> {
         mobileNo: mobile,
         role: role,
       );
+
+      FcmTokenManager.init(
+        userId: doctorId,
+        role: role,
+        clinicId: null,
+      );
+
 
       Navigator.pushReplacement(
         context,

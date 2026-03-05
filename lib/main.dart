@@ -15,7 +15,7 @@ Future<void> main() async {
 
   NotificationService.instance.init();
   await AppPreferences.init();
-  FcmTokenManager.init();
+
   runApp(const MyApp());
 }
 

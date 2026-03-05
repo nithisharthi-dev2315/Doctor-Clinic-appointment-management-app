@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../api/login_api.dart';
 import 'LoginEntryPage.dart';
 import 'MainScreen.dart';
+import 'NotificationService/fcm_token_manager.dart';
 import 'Preferences/AppPreferences.dart';
 import 'TokenManager.dart';
 import 'api/login_request.dart';
@@ -377,6 +378,12 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
 
         _showSnack("Login successful", success: true);
 
+        FcmTokenManager.init(
+          userId: user.id,
+          role: user.role,
+          clinicId: null,
+        );
+
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
@@ -433,6 +440,13 @@ class _DoctorLoginPageState extends State<DoctorLoginPage> {
 
         _showSnack("Login successful", success: true);
         await TokenManager.loadTokenFromPrefs();
+
+        FcmTokenManager.init(
+          userId: clinic.id,
+          role: clinic.role,
+          clinicId: null,
+        );
+
 
 
         Navigator.pushAndRemoveUntil(

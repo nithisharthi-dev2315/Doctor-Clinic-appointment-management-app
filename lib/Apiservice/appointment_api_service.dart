@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../Preferences/AppPreferences.dart';
 import '../SessionUpdateRequest.dart';
 import '../TokenManager.dart';
+import '../UnauthorizedException.dart';
 import '../model/AddSessionRequest.dart';
 import '../model/AddSessionResponsee.dart';
 import '../model/AvailableDoctor.dart';
@@ -655,43 +656,47 @@ import '../utils/ApiConstants.dart';
 
   static const String authTokenUrl = "https://srv1090011.hstgr.cloud/api/token/regenerate";
 
-  static Future<TokenRefreshResponse> regenerateToken(
-      {
-    required String oldToken,
-  }) async {
-    print('oldToken===========${oldToken}');
-    final response = await http.post(
-      Uri.parse(authTokenUrl),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $oldToken",
-      },
-    );
+    static Future<TokenRefreshResponse> regenerateToken({
+      required String oldToken,
+    }) async {
 
-    debugPrint("🔄 TOKEN REFRESH STATUS → ${response.statusCode}");
-    debugPrint("🔄 TOKEN REFRESH BODY → ${response.body}");
+      final response = await http.post(
+        Uri.parse(authTokenUrl),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $oldToken",
+        },
+      );
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> json =
-      jsonDecode(response.body) as Map<String, dynamic>;
+      debugPrint("🔄 TOKEN REFRESH STATUS → ${response.statusCode}");
+      debugPrint("🔄 TOKEN REFRESH BODY → ${response.body}");
 
-      if (json['success'] == true && json['accessToken'] != null) {
-        return TokenRefreshResponse.fromJson(json);
-      } else {
-        throw Exception("Token refresh failed: invalid response");
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json =
+        jsonDecode(response.body) as Map<String, dynamic>;
+
+        if (json['success'] == true && json['accessToken'] != null) {
+          return TokenRefreshResponse.fromJson(json);
+        } else {
+          throw Exception("Invalid refresh response");
+        }
       }
-    } else {
-      throw Exception("Token refresh failed: ${response.body}");
+      else if (response.statusCode == 401 || response.statusCode == 403) {
+        throw UnauthorizedException(); // 👈 custom exception
+      }
+      else {
+        throw Exception("Token refresh failed: ${response.body}");
+      }
     }
-  }
-
 
   static const String grtpatenturl =
       "https://srv1090011.hstgr.cloud/api/clinics/patients";
 
   /// 🔹 Get Public Patient Details
   static Future<ClinicPatientResponse> getPublicPatientDetails(
-      String patientId) async {
+      String patientId) async
+
+  {
     final url = Uri.parse("$grtpatenturl/public/$patientId");
 
     try {
@@ -716,7 +721,8 @@ import '../utils/ApiConstants.dart';
       throw Exception("API Error: $e");
     }
   }
-  static Future<List<ClinicDropdown>> getClinics() async {
+  static Future<List<ClinicDropdown>> getClinics()
+  async {
     final res = await http.get(
       Uri.parse(
         "https://srv1090011.hstgr.cloud/api/clinics/patients/clinics",
@@ -733,7 +739,8 @@ import '../utils/ApiConstants.dart';
     required String amount,
     required String treatment,
     String notes = "",
-  }) async {
+  }) async
+  {
     final token = await AppPreferences.getAccessToken();
 
     final url = Uri.parse(
@@ -775,7 +782,8 @@ import '../utils/ApiConstants.dart';
   }
 
   static Future<ClinicPatientResponse?> addClinicPatient(
-      Map<String, dynamic> body) async {
+      Map<String, dynamic> body) async
+  {
 
     final token = await AppPreferences.getAccessToken();
 

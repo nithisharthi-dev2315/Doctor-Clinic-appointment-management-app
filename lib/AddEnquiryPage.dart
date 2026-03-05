@@ -2,18 +2,21 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-
 import 'Apiservice/appointment_api_service.dart';
+import 'AppToast.dart';
+import 'api/ApiService.dart';
 import 'model/EnquiryRequest.dart';
 
 class AddEnquiryDialog extends StatefulWidget {
   final String appointmentId;
   final String doctorId;
+  final String roomName;
 
   const AddEnquiryDialog({
     super.key,
     required this.appointmentId,
     required this.doctorId,
+    required this.roomName,
   });
 
   @override
@@ -29,6 +32,42 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
   bool isListening = false;
   TextEditingController? activeController;
   bool isLoading = false;
+  bool isSummarizing = false;
+  bool isSummaryAdded = false;
+  bool isTranscribing = false;
+
+
+
+  // 🎙 Recording state
+  bool isChiefListening = false;
+  bool isNotesListening = false;
+
+// ⏳ Transcript Loading
+  bool isChiefTranscribing = false;
+  bool isNotesTranscribing = false;
+
+// ✨ Summarize Loading
+  bool isChiefSummarizing = false;
+  bool isNotesSummarizing = false;
+
+// ✅ Summary Added
+  bool isChiefSummaryAdded = false;
+  bool isNotesSummaryAdded = false;
+
+  String normalize(String text) {
+    return text
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .toLowerCase()
+        .trim();
+  }
+
+  String extractChiefComplaint(String text) {
+    final regex = RegExp(r'Chief Complaint:(.*?)(\n|$)',
+        caseSensitive: false);
+
+    final match = regex.firstMatch(text);
+    return match != null ? match.group(0)!.trim() : "";
+  }
 
 
   @override
@@ -40,6 +79,8 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
 
   Future<void> _startListening(TextEditingController controller) async {
     activeController = controller;
+
+    bool isChief = controller == chiefController;
 
     try {
       bool available = await _speech.initialize(
@@ -59,14 +100,28 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
         return;
       }
 
-      setState(() => isListening = true);
+      setState(() {
+        if (isChief) {
+          isChiefListening = true;
+        } else {
+          isNotesListening = true;
+        }
+      });
 
       _speech.listen(
-        localeId: 'en_IN', // change to ta_IN if needed
+        localeId: 'en_IN',
         onResult: (result) {
-          setState(() {
-            controller.text = result.recognizedWords;
-          });
+          if (!mounted) return;
+
+          if (result.finalResult) {
+            setState(() {
+              final newText = result.recognizedWords.trim();
+              if (newText.isNotEmpty) {
+                controller.text =
+                    "${controller.text.trim()} $newText".trim();
+              }
+            });
+          }
         },
       );
     } catch (e) {
@@ -79,38 +134,269 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
     if (_speech.isListening) {
       _speech.stop();
     }
-    setState(() => isListening = false);
+
+    setState(() {
+      isChiefListening = false;
+      isNotesListening = false;
+    });
   }
 
+  Widget _actionRow(
+      TextEditingController controller, {
+        bool showTranscribe = true,
+        required String roomName,
+      }) {
 
-  Widget _actionRow(TextEditingController controller) {
+    bool isChief = controller == chiefController;
+
+    bool isListening =
+    isChief ? isChiefListening : isNotesListening;
+
+    bool isTranscribing =
+    isChief ? isChiefTranscribing : isNotesTranscribing;
+
+    bool isSummarizing =
+    isChief ? isChiefSummarizing : isNotesSummarizing;
+
+    bool isSummaryAdded =
+    isChief ? isChiefSummaryAdded : isNotesSummaryAdded;
+
+    Widget smallButton({
+      required Widget child,
+      required VoidCallback? onTap,
+      required Color color,
+    }) {
+      return Expanded(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: color, width: 1),
+            ),
+            child: Center(child: child),
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          OutlinedButton.icon(
-            onPressed: () {
-              isListening ? _stopListening() : _startListening(controller);
+
+          /// 🎙 Record
+          smallButton(
+            color: Colors.red,
+            onTap: () {
+              isListening
+                  ? _stopListening()
+                  : _startListening(controller);
             },
-            icon: Icon(
-              isListening ? Icons.stop : Icons.mic,
-              size: 18,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isListening ? Icons.stop : Icons.mic,
+                  size: 16,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isListening ? "Stop" : "Record",
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.red,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-            label: Text(isListening ? "Stop" : "Record"),
           ),
-          const SizedBox(width: 10),
-          OutlinedButton.icon(
-            onPressed: () {
-              _toast("Summarize coming soon");
+
+          const SizedBox(width: 6),
+
+          if (showTranscribe) ...[
+            smallButton(
+              color: Colors.teal,
+              onTap: isTranscribing
+                  ? null
+                  : () async {
+                if (isSummaryAdded) {
+                  AppToast.warning(context, "Summary already added");
+                  return;
+                }
+
+                setState(() {
+                  if (isChief) {
+                    isChiefTranscribing = true;
+                  } else {
+                    isNotesTranscribing = true;
+                  }
+                });
+
+                final result =
+                await ApiService.summarizeChiefComplaint(roomName);
+
+                if (!mounted) return;
+
+                setState(() {
+                  if (isChief) {
+                    isChiefTranscribing = false;
+                  } else {
+                    isNotesTranscribing = false;
+                  }
+                });
+
+                if (result != null && result.trim().isNotEmpty) {
+                  controller.text =
+                  "${controller.text.trim()}\n\n${result.trim()}";
+
+                  setState(() {
+                    if (isChief) {
+                      isChiefSummaryAdded = true;
+                    } else {
+                      isNotesSummaryAdded = true;
+                    }
+                  });
+                }
+              },
+              child: isTranscribing
+                  ? const SizedBox(
+                height: 16,
+                width: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.teal,
+                ),
+              )
+                  : const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.edit_note,
+                      size: 16, color: Colors.teal),
+                  SizedBox(height: 2),
+                  Text(
+                    "Transcript",
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.teal,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+
+          /// ✨ Summarize with Loading
+          smallButton(
+            color: Colors.deepPurple,
+            onTap: isSummarizing
+                ? null
+                : () async {
+              if (controller.text.trim().isEmpty) {
+                AppToast.warning(context, "Please enter text to summarize");
+                return;
+              }
+
+              setState(() {
+                if (isChief) {
+                  isChiefSummarizing = true;
+                } else {
+                  isNotesSummarizing = true;
+                }
+              });
+
+              final result =
+              await ApiService.summarizeText(controller.text.trim());
+
+              if (!mounted) return;
+
+              setState(() {
+                if (isChief) {
+                  isChiefSummarizing = false;
+                } else {
+                  isNotesSummarizing = false;
+                }
+              });
+
+              if (result != null && result.isNotEmpty) {
+                AppToast.success(context, "Successfully Added");
+              }
             },
-            icon: const Icon(Icons.auto_awesome, size: 18),
-            label: const Text("Summarize"),
+
+            child: isSummarizing
+                ? const SizedBox(
+              height: 16,
+              width: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.deepPurple,
+              ),
+            )
+                : const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.auto_awesome,
+                    size: 16,
+                    color: Colors.deepPurple),
+                SizedBox(height: 2),
+                Text(
+                  "Summarize",
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.deepPurple,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 6),
+
+          /// 🗑 Clear
+          smallButton(
+            color: Colors.grey,
+            onTap: () {
+              controller.clear();
+
+              setState(() {
+                if (isChief) {
+                  isChiefSummaryAdded = false;
+                } else {
+                  isNotesSummaryAdded = false;
+                }
+              });
+            },
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.clear,
+                    size: 16, color: Colors.grey),
+                SizedBox(height: 2),
+                Text(
+                  "Clear",
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
+
+
+
 
 
 
@@ -201,7 +487,11 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
                     hint: "Describe the patient's main issue",
                     maxLines: 4,
                   ),
-                  _actionRow(chiefController),
+                  _actionRow(
+                    chiefController,
+                    showTranscribe: true, // 4 buttons
+                      roomName:widget.roomName
+                  ),
                 ],
               ),
             ),
@@ -219,7 +509,11 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
                     hint: "Additional observations or notes",
                     maxLines: 3,
                   ),
-                  _actionRow(notesController),
+                  _actionRow(
+                    notesController,
+                    showTranscribe: false, // Only 3 buttons
+                      roomName:widget.roomName
+                  ),
                 ],
               ),
             ),
@@ -302,7 +596,11 @@ class _AddEnquiryDialogState extends State<AddEnquiryDialog> {
   }) {
     return TextField(
       controller: controller,
-      maxLines: maxLines,
+      onChanged: (_) {
+        isSummaryAdded = false;
+      },
+      minLines: 3,
+      maxLines: null, // ✅ auto expand vertically
       cursorColor: const Color(0xFF2563EB),
       style: GoogleFonts.poppins(
         fontSize: 14,

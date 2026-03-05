@@ -191,7 +191,6 @@ class _CommonWebViewPageState extends State<CommonWebViewPage> {
       onWillPop: _onWillPop,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        // ✅ IMPORTANT
         extendBody: true,
         extendBodyBehindAppBar: true,
 
@@ -200,7 +199,7 @@ class _CommonWebViewPageState extends State<CommonWebViewPage> {
           elevation: 0,
 
           iconTheme: const IconThemeData(
-            color: Colors.white, // 👈 back arrow color
+            color: Colors.white,
           ),
 
           title: Text(

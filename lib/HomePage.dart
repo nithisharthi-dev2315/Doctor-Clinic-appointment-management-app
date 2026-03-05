@@ -1,12 +1,16 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'Apiservice/appointment_api_service.dart';
 import 'BookYourAppointmentpage/BookYourAppointment.dart';
 import 'ClinicPatientDetailsPage.dart';
 import 'CommonWebViewPage.dart';
+import 'LoginEntryPage.dart';
 import 'PatientDetailsPage.dart';
+import 'PoseHomeScreen.dart';
 import 'Preferences/AppPreferences.dart';
+import 'UnauthorizedException.dart';
 import 'api/ApiService.dart';
 import 'api/Appointment.dart';
 import 'model/ClinicPatientResponse.dart';
@@ -41,17 +45,39 @@ class _HomePageState extends State<HomePage> {
 
   late Future<List<ClinicPatient>> _clinicPatientsFuture;
 
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+  String _currentText = "";
+  String _localeId = "";
+  List<Map<String, String>> patientSpeaks = [];
+
+
+
   @override
   void initState() {
     super.initState();
     _loadAppointments();
+    _speech = stt.SpeechToText();
+    _initSpeech();
     _init();
     print('widget.doctorId==========${widget.doctorId}');
   }
   Future<void> _init() async {
-    String token = await AppPreferences.getAccessToken();
-    await AppointmentApiService.regenerateToken(oldToken: token);
+    try {
+      String token = await AppPreferences.getAccessToken();
+      await AppointmentApiService.regenerateToken(oldToken: token);
+    } on UnauthorizedException {
+      await AppPreferences.logout();
 
+      if (!mounted) return;
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginEntryPage()),
+            (route) => false,
+      );
+    } catch (e) {
+      debugPrint("Other error: $e");
+    }
   }
 
   void _loadAppointments() {
@@ -63,6 +89,62 @@ class _HomePageState extends State<HomePage> {
           ApiService.getDoctorAppointments(widget.doctorId);
     }
   }
+
+  Future<void> _initSpeech() async {
+    await _speech.initialize(
+      onStatus: (status) {
+        if (status == "done") {
+          _stopAndSave(); // 🔥 auto save when speech ends
+        }
+      },
+      onError: (error) {
+        debugPrint("Speech Error: $error");
+      },
+    );
+
+    final systemLocale = await _speech.systemLocale();
+    _localeId = systemLocale?.localeId ?? "";
+  }
+  Future<void> _togglePatientSpeech() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize();
+      if (available) {
+        setState(() => _isListening = true);
+
+        _speech.listen(
+          localeId: _localeId, // 🌍 All languages
+          listenMode: stt.ListenMode.dictation,
+          partialResults: false,
+          onResult: (result) {
+            _currentText = result.recognizedWords;
+          },
+        );
+      }
+    } else {
+      _stopAndSave();
+    }
+  }
+  Future<void> _stopAndSave() async {
+    await _speech.stop();
+
+    setState(() => _isListening = false);
+
+    if (_currentText.trim().isEmpty) return;
+
+    final Map<String, String> data = {
+      "speak": _currentText.trim(),
+    };
+
+    patientSpeaks.add(data);
+
+    debugPrint("🗣 Stored: $data");
+
+    _currentText = "";
+
+    /// 🔥 OPTIONAL → Send to API here
+    // await ApiService.sendSpeech(data);
+  }
+
 
 
   Future<void> _onRefresh() async {

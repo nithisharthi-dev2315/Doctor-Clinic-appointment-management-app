@@ -48,7 +48,8 @@ class ApiService {
   static Future<ClinicLoginResponse> clinicLogin(
       String username,
       String password,
-      ) async {
+      ) async
+  {
     final response = await ApiService.post(
       "/clinics/auth/login",
       {
@@ -136,6 +137,98 @@ class ApiService {
     return response.statusCode == 200 && data['success'] == true;
   }
 
+  static const String fcm_url =
+      "https://srv1090011.hstgr.cloud/api/notifications/update";
 
+  static Future<void> saveFcmToken({
+    required String userId,
+    required String role,
+    required String token,
+    String deviceType = "android",
+    String? clinicId,
+  })
+  async {
+    try {
+      final response = await http.post(
+        Uri.parse(fcm_url),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "userId": userId,
+          "role": role,
+          "token": token,
+          "deviceType": deviceType,
+          "clinicId": clinicId,
+        }),
+      );
+
+      debugPrint("🔹 FCM API Status: ${response.statusCode}");
+      debugPrint("🔹 FCM API Response: ${response.body}");
+
+      if (response.statusCode == 200) {
+        debugPrint("✅ FCM token saved successfully");
+      } else {
+        debugPrint("❌ Failed to save FCM token");
+      }
+    } catch (e) {
+      debugPrint("❌ FCM API Error: $e");
+    }
+  }
+  static Future<String?> summarizeChiefComplaint(String roomName) async {
+    try {
+      final response = await http.post(
+        Uri.parse("https://srv1090011.hstgr.cloud/api/video/summarize"),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "roomName": roomName,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data["success"] == true) {
+          String summary = data["summary"] ?? "";
+
+          print('summary=========== $summary');
+
+          // ✅ RETURN FULL SUMMARY (NO REGEX)
+          return summary.trim();
+        }
+      }
+
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+  static Future<String?> summarizeText(String text) async {
+    try {
+      final response = await http.post(
+        Uri.parse("https://srv1090011.hstgr.cloud/api/ai/summarize-text"),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "text": text,
+        }),
+      );
+      print('text=========${text}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data["success"] == true) {
+          return (data["summary"] ?? "").toString().trim();
+        }
+      }
+
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 
 }

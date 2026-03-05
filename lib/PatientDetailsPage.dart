@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'AddEnquiryPage.dart';
 import 'BookSessionDialog.dart';
+import 'PoseHomeScreen.dart';
 import 'TransferDoctorDialog.dart';
 import 'TransferPatientDialog.dart';
 import 'api/Appointment.dart';
@@ -48,7 +49,7 @@ class PatientDetailsPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _actionButtons(context),
+            _actionButtons(context,appointment),
             const SizedBox(height: 20),
             _detailsCard(),
           ],
@@ -137,7 +138,7 @@ class PatientDetailsPage extends StatelessWidget {
   }
 
   /// 🔹 ACTION BUTTONS (GRID STYLE)
-  Widget _actionButtons(BuildContext context) {
+  Widget _actionButtons(BuildContext context,Appointment appointment) {
     return Column(
       children: [
         Row(
@@ -145,7 +146,7 @@ class PatientDetailsPage extends StatelessWidget {
             _gridBtn(
               "Add Enquiry",
               const Color(0xFF16A34A),
-                  () => _showAddEnquiryDialog(context),
+                  () => _showAddEnquiryDialog(context,appointment),
             ),
             const SizedBox(width: 12),
             _gridBtn(
@@ -283,6 +284,41 @@ class PatientDetailsPage extends StatelessWidget {
 
           ],
         ),
+        const SizedBox(height: 16),
+
+        /// ✅ CENTER AI POSTER BUTTON
+        Center(
+          child: SizedBox(
+            width: 200,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF59E0B), // 🔥 good AI color
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => HomeScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.auto_awesome, color: Colors.white),
+              label: Text(
+                "AI Poster",
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -319,7 +355,7 @@ class PatientDetailsPage extends StatelessWidget {
 
 
 
-  void _showAddEnquiryDialog(BuildContext context) {
+  void _showAddEnquiryDialog(BuildContext context,Appointment appointment) {
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
@@ -347,6 +383,8 @@ class PatientDetailsPage extends StatelessWidget {
                   child: AddEnquiryDialog(
                     appointmentId: appointment.id,
                     doctorId: doctorId,
+                    roomName: appointment.twilioRoomName ?? "",
+
                   ),
                 ),
               ),
