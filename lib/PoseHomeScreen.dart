@@ -1,19 +1,27 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:typed_data' as ui show ByteData;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:ui' as ui;
 import 'PosturePdfService.dart';
+import 'dart:typed_data';
 
 class PoseHomeScreen extends StatefulWidget {
+
   const PoseHomeScreen({super.key});
+
 
   @override
   State<PoseHomeScreen> createState() => _PoseHomeScreenState();
+
 }
 
+final GlobalKey _captureKey = GlobalKey();
 class _PoseHomeScreenState extends State<PoseHomeScreen>
     with TickerProviderStateMixin {
   final ImagePicker _picker = ImagePicker();
@@ -60,7 +68,7 @@ class _PoseHomeScreenState extends State<PoseHomeScreen>
     super.dispose();
   }
 
-  // ── Pick from Gallery ─────────────────────────────────────────────────────
+
   Future<void> _pickGallery() async {
     final XFile? file = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -70,7 +78,7 @@ class _PoseHomeScreenState extends State<PoseHomeScreen>
     await _processImage(File(file.path));
   }
 
-  // ── Pick from Camera ──────────────────────────────────────────────────────
+
   Future<void> _pickCamera() async {
     final XFile? file = await _picker.pickImage(
       source: ImageSource.camera,
@@ -95,7 +103,6 @@ class _PoseHomeScreenState extends State<PoseHomeScreen>
     try {
       final bytes = await imageFile.readAsBytes();
 
-      // ✅ REMOVE await here
       ui.decodeImageFromList(bytes, (ui.Image img) {
         setState(() {
           _imageSize = Size(
@@ -132,29 +139,26 @@ class _PoseHomeScreenState extends State<PoseHomeScreen>
       _feedbackController.forward();
     }
   }
-  // ─────────────────────────────────────────────────────────────────────────
-  //  BUILD
-  // ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF111111),
       body: Column(
         children: [
-          // ── Image area fills most of the screen ───────────────────────────
+
           Expanded(child: _buildImageArea()),
 
-          // ── Feedback card ─────────────────────────────────────────────────
+
           _buildFeedbackCard(),
 
-          // ── Bottom navigation bar ─────────────────────────────────────────
+
           _buildBottomBar(),
         ],
       ),
     );
   }
 
-  // ── Image Area ────────────────────────────────────────────────────────────
+
   Widget _buildImageArea() {
     return Container(
       color: Colors.black,
@@ -165,7 +169,6 @@ class _PoseHomeScreenState extends State<PoseHomeScreen>
         children: [
           // Actual image
           Image.file(_image!, fit: BoxFit.contain),
-
           // Skeleton overlay
           if (_poses.isNotEmpty)
             AnimatedBuilder(
@@ -217,7 +220,6 @@ class _PoseHomeScreenState extends State<PoseHomeScreen>
               ),
             ),
 
-          // Pose name badge top-left
           if (_poseInfo != null && !_isLoading)
             Positioned(
               top: 16,
@@ -296,7 +298,7 @@ class _PoseHomeScreenState extends State<PoseHomeScreen>
     );
   }
 
-  // ── Feedback Card (matches screenshot style) ──────────────────────────────
+
   Widget _buildFeedbackCard() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -360,7 +362,7 @@ class _PoseHomeScreenState extends State<PoseHomeScreen>
     );
   }
 
-  // ── Bottom Bar (Gallery | Pose | Camera) ──────────────────────────────────
+
   Widget _buildBottomBar() {
     return Container(
       padding: const EdgeInsets.only(bottom: 28, top: 12, left: 40, right: 40),
@@ -454,6 +456,7 @@ class _BarButton extends StatelessWidget {
     );
   }
 }
+
 PoseInfo _classifyPose(List<Pose> poses) {
   if (poses.isEmpty) {
     return PoseInfo('Unknown', 'Could not detect a pose. Try a clearer full-body photo.', '❓');
@@ -495,7 +498,7 @@ PoseInfo _classifyPose(List<Pose> poses) {
   final bodyWidth  = (ls.x - rs.x).abs();
   final hipLean    = (shoulderX - hipX).abs();
 
-  // ── Downward Dog: hips highest point, shoulders and ankles lower ──────────
+
   if (lh != null && rh != null && ls != null && rs != null &&
       la != null && ra != null &&
       hipY < shoulderY - 30 && hipY < (la.y + ra.y) / 2 - 30 &&
@@ -507,7 +510,7 @@ PoseInfo _classifyPose(List<Pose> poses) {
     );
   }
 
-  // ── Warrior II: arms extended, legs wide apart ───────────────────────────
+
   if (lw != null && rw != null && lk != null && rk != null &&
       (lw.x - rw.x).abs() > bodyWidth * 1.5 &&
       (lk.x - rk.x).abs() > bodyWidth * 0.8) {
@@ -518,7 +521,7 @@ PoseInfo _classifyPose(List<Pose> poses) {
     );
   }
 
-  // ── Tree Pose: one knee raised sideways ──────────────────────────────────
+
   if (lk != null && rk != null && la != null && ra != null) {
     final kneeDiff = (lk.y - rk.y).abs();
     final ankleDiff = (la.y - ra.y).abs();
@@ -531,7 +534,7 @@ PoseInfo _classifyPose(List<Pose> poses) {
     }
   }
 
-  // ── Warrior I: one leg forward, arms up ──────────────────────────────────
+
   if (lk != null && rk != null && wristY != null && wristY < shoulderY - 30 &&
       (lk.x - rk.x).abs() > bodyWidth * 0.6) {
     return PoseInfo(
@@ -541,7 +544,7 @@ PoseInfo _classifyPose(List<Pose> poses) {
     );
   }
 
-  // ── Arms Raised / Mountain Pose with arms up ─────────────────────────────
+
   if (wristY != null && wristY < shoulderY - 60 && elbowY != null && elbowY < shoulderY) {
     return PoseInfo(
       'Arms Raised Pose',
@@ -550,7 +553,7 @@ PoseInfo _classifyPose(List<Pose> poses) {
     );
   }
 
-  // ── Plank: horizontal body, wrists under shoulders ───────────────────────
+
   if (wristY != null && la != null && ra != null) {
     final horizontalSpread = (shoulderY - hipY).abs();
     if (horizontalSpread < 40 && wristY > shoulderY - 20) {
@@ -562,7 +565,7 @@ PoseInfo _classifyPose(List<Pose> poses) {
     }
   }
 
-  // ── Child\'s Pose: hips back, arms forward, head low ─────────────────────
+
   if (nose != null && hipY != null && wristY != null &&
       nose.y > shoulderY + 30 && wristY < shoulderY + 40 &&
       hipY > shoulderY + 20) {
@@ -573,7 +576,7 @@ PoseInfo _classifyPose(List<Pose> poses) {
     );
   }
 
-  // ── Sitting Pose ──────────────────────────────────────────────────────────
+
   if (kneeY != null && (hipY - kneeY).abs() < 60) {
     return PoseInfo(
       'Seated Pose',
@@ -581,8 +584,6 @@ PoseInfo _classifyPose(List<Pose> poses) {
       '🪑',
     );
   }
-
-  // ── T-Pose / Star: arms wide, legs apart ─────────────────────────────────
   if (lw != null && rw != null && la != null && ra != null &&
       (lw.x - rw.x).abs() > bodyWidth * 2.0 &&
       (la.x - ra.x).abs() > bodyWidth * 0.8) {
@@ -628,12 +629,7 @@ class PoseInfo {
 void main() {
   runApp(const APECSApp());
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  THEME & COLORS
-// ═══════════════════════════════════════════════════════════════════════════════
 const _blue      = Color(0xFF1565C0);
-const _lightBlue = Color(0xFF42A5F5);
 const _orange    = Color(0xFFF57C00);
 const _green     = Color(0xFF2E7D32);
 const _red       = Color(0xFFC62828);
@@ -641,10 +637,6 @@ const _amber     = Color(0xFFFFA000);
 const _bg        = Color(0xFFF5F7FA);
 const _card      = Color(0xFFFFFFFF);
 const _headerBg  = Color(0xFFE3F2FD);
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  DATA MODELS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 class PostureMeasurement {
   final String label;
@@ -686,9 +678,6 @@ class PostureReport {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  POSTURE ANALYSIS ENGINE  (mimics APECS logic from the PDF)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 PostureReport analyzePosture(List<Pose> poses) {
   if (poses.isEmpty) {
@@ -961,9 +950,6 @@ PostureReport analyzePosture(List<Pose> poses) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  ROOT APP
-// ═══════════════════════════════════════════════════════════════════════════════
 class APECSApp extends StatelessWidget {
   const APECSApp({super.key});
 
@@ -1108,8 +1094,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             child: Image.network(
               'https://i.imgur.com/placeholder.png',
-              width: 32,
-              height: 32,
+              width: 30,
+              height: 30,
               errorBuilder: (_, __, ___) =>
               const Icon(Icons.accessibility, color: _blue, size: 28),
             ),
@@ -1122,9 +1108,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'ZEROMEDIXINE',
+                'AI Posture Analysis',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 16,
                   fontWeight: FontWeight.w900,
                   color: _blue,
                   letterSpacing: 1.5,
@@ -1197,11 +1183,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Icon(Icons.person_search, size: 64, color: _blue.withOpacity(0.4)),
                 const SizedBox(height: 16),
-                const Text('Upload a Full Body Photo',
+                const Text('Upload Your Full Body Photo',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold,
                         color: _blue)),
                 const SizedBox(height: 8),
-                Text('Stand facing camera for best results',
+                Text(' Stand facing the camera for accurate results',
                     style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
                 const SizedBox(height: 20),
                 Row(
@@ -1222,7 +1208,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Row(
             children: [
               Expanded(child: _InfoTile(icon: Icons.straighten, title: '7 Measurements',
-                  sub: 'Body, Head, Shoulder, Pelvis, Knees, Feet', color: _blue)),
+                  sub: ' Head, shoulder, pelvis, knee, and foot alignment analysis', color: _blue)),
               const SizedBox(width: 12),
               Expanded(child: _InfoTile(icon: Icons.fitness_center, title: 'Exercise Plan',
                   sub: 'Customised corrective exercises', color: _orange)),
@@ -1232,10 +1218,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Row(
             children: [
               Expanded(child: _InfoTile(icon: Icons.warning_amber, title: 'Problem Detection',
-                  sub: 'Head tilt, shoulder imbalance, pelvic shift', color: _red)),
+                  sub: 'Detects head tilt, shoulder imbalance, and pelvic shift.', color: _red)),
               const SizedBox(width: 12),
-              Expanded(child: _InfoTile(icon: Icons.description, title: 'Full Report',
-                  sub: 'GOOGLE-style posture report card', color: _green)),
+              Expanded(child: _InfoTile(icon: Icons.description, title: 'Detailed Posture Report',
+                  sub: 'Professional posture assessment report.', color: _green)),
             ],
           ),
         ],
@@ -1269,24 +1255,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(12),
                   child: SizedBox(
                     height: 260,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.file(_image!, fit: BoxFit.contain),
-                        if (_poses.isNotEmpty)
-                          LayoutBuilder(builder: (ctx, c) => CustomPaint(
-                            painter: PosePainter(
-                              poses: _poses, imageSize: _imageSize,
-                              displaySize: Size(c.maxWidth, c.maxHeight),
+                    child: RepaintBoundary(
+                      key: _captureKey,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.file(_image!, fit: BoxFit.contain),
+
+                          if (_poses.isNotEmpty)
+                            LayoutBuilder(
+                              builder: (ctx, c) => CustomPaint(
+                                painter: PosePainter(
+                                  poses: _poses,
+                                  imageSize: _imageSize,
+                                  displaySize: Size(c.maxWidth, c.maxHeight),
+                                ),
+                              ),
                             ),
-                          )),
-                        // Status badge
-                        Positioned(
-                          top: 10, left: 10,
-                          child: _StatusBadge(status: report.overallStatus),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    )
                   ),
                 ),
               ),
@@ -1304,11 +1292,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 onPressed: () async {
                   if (_image == null || _report == null) return;
 
+                  final imageBytes = await captureMeasurementImage();
+
                   final file = await PosturePdfService.generateReport(
-                    image: _image!,
+                    measurementImage: imageBytes,
                     report: _report!,
                   );
-
                   await PosturePdfService.sharePdf(file);
                 },
                 icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
@@ -1344,8 +1333,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                     if (report.problems.isNotEmpty) ...[
                       const Divider(height: 20),
-                      const Text('Issues Found:',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      const Text('Issues Found:',style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                       const SizedBox(height: 6),
                       ...report.problems.map((p) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -1472,6 +1460,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   }
 
+
+
   // ── Bottom Bar ────────────────────────────────────────────────────────────
   Widget _buildBottomBar() {
     return Container(
@@ -1516,6 +1506,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 }
 
+Future<Uint8List> captureMeasurementImage() async {
+  final boundary = _captureKey.currentContext?.findRenderObject()
+  as RenderRepaintBoundary?;
+
+  if (boundary == null) {
+    throw Exception("Capture boundary not found");
+  }
+
+  final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+
+  final ui.ByteData? byteData =
+  await image.toByteData(format: ui.ImageByteFormat.png);
+
+  if (byteData == null) {
+    throw Exception("Failed to convert image to bytes");
+  }
+
+  return byteData.buffer.asUint8List();
+}
+
 Color _statusColor(String status) {
   switch (status) {
     case 'good':     return _green;
@@ -1535,7 +1545,6 @@ String _statusLabel(String status) {
     default:         return 'Unknown';
   }
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  SMALL WIDGETS
@@ -1828,6 +1837,7 @@ class _BarBtn extends StatelessWidget {
     ),
   );
 }
+
 class PosePainter extends CustomPainter {
   final List<Pose> poses;
   final Size imageSize;

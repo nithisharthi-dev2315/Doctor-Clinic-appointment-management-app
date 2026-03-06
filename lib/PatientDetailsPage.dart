@@ -309,7 +309,7 @@ class PatientDetailsPage extends StatelessWidget {
               },
               icon: const Icon(Icons.auto_awesome, color: Colors.white),
               label: Text(
-                "AI Poster",
+                "AI Posture",
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,

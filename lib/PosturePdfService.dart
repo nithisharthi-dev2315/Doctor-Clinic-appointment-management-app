@@ -54,17 +54,26 @@ class PosturePdfService {
   }
   static String _pad(int n) => n.toString().padLeft(2, '0');
   static Future<File> generateReport({
-    required File image,
+    required Uint8List measurementImage,
     required PostureReport report,
-  }) async {
-    final pdf        = pw.Document();
-    final imageBytes = await image.readAsBytes();
-    final pdfImage   = pw.MemoryImage(imageBytes);
-    final now        = DateTime.now();
-    final dateStr    = '${_pad(now.day)}/${_pad(now.month)}/${now.year}';
-    final reportNo   = 'RPT ${now.millisecondsSinceEpoch.toString().substring(6)}';
+  }) async
+  {
+
+    final pdf = pw.Document();
+
+    final pdfImage = pw.MemoryImage(measurementImage);
+
+    final now = DateTime.now();
+    final dateStr = '${_pad(now.day)}/${_pad(now.month)}/${now.year}';
+
+    final reportNo =
+        'RPT ${now.millisecondsSinceEpoch.toString().substring(6)}';
+
     final logoBytes =
-    (await rootBundle.load('assert/image/splashscreen.png')).buffer.asUint8List();
+    (await rootBundle.load('assert/image/splashscreen.png'))
+        .buffer
+        .asUint8List();
+
     final logoImage = pw.MemoryImage(logoBytes);
 
     pdf.addPage(
@@ -153,12 +162,12 @@ class PosturePdfService {
         ],
       ),
     );
-
     final dir  = await getTemporaryDirectory();
     final file = File('${dir.path}/zeromedixine_posture_report.pdf');
     await file.writeAsBytes(await pdf.save());
     return file;
   }
+
   static pw.Widget _buildPageHeader(
       String dateStr,
       String reportNo,
@@ -179,8 +188,8 @@ class PosturePdfService {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Container(
-                width: 120,
-                height: 100,
+                width: 150,
+                height: 165,   
                 child: pw.Image(
                   logoImage,
                   fit: pw.BoxFit.contain,
@@ -212,11 +221,6 @@ class PosturePdfService {
     );
   }
 
-
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  INFO BOXES  — FROM  |  ANALYSIS INFO  (invoice FROM / BILL TO style)
-  // ══════════════════════════════════════════════════════════════════════════
   static pw.Widget _buildInfoBoxes(PostureReport report, String dateStr) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -231,7 +235,7 @@ class PosturePdfService {
         pw.SizedBox(width: 16),
         pw.Expanded(
           child: _infoBox(label: 'ANALYSIS INFO', lines: [
-            'AI Posture Analysis Session',
+            'AI Posture Analysis',
             'Date: $dateStr',
             'Engine: GOOGLE · ML Kit',
             'Status: ${_overallText(report.overallStatus)}',
@@ -242,7 +246,8 @@ class PosturePdfService {
   }
 
   static pw.Widget _infoBox(
-      {required String label, required List<String> lines}) {
+      {required String label, required List<String> lines})
+  {
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(
@@ -270,9 +275,6 @@ class PosturePdfService {
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  STATUS BANNER
-  // ══════════════════════════════════════════════════════════════════════════
   static pw.Widget _buildStatusBar(PostureReport report) {
     final color = _statusColor(report.overallStatus);
     return pw.Container(
@@ -293,15 +295,14 @@ class PosturePdfService {
               color: PdfColors.white,
             ),
           ),
-          pw.Text('Powered by ML Kit · GOOGLE ML System',
+          pw.Text('Zeromedixine AI Posture Assessment',
               style: pw.TextStyle(fontSize: 8, color: PdfColors.white)),
         ],
       ),
     );
   }
-// ══════════════════════════════════════════════════════════════════════════
-  //  POSTURE IMAGE
-  // ══════════════════════════════════════════════════════════════════════════
+
+
   static pw.Widget _buildImageSection(pw.MemoryImage img) {
     return pw.Center(
       child: pw.Container(
@@ -319,9 +320,7 @@ class PosturePdfService {
       ),
     );
   }
-  // ══════════════════════════════════════════════════════════════════════════
-  //  SECTION LABEL  — cyan left border, light-blue background
-  // ══════════════════════════════════════════════════════════════════════════
+
   static pw.Widget _sectionLabel(String title) {
     return pw.Container(
       width: double.infinity,
@@ -341,9 +340,7 @@ class PosturePdfService {
           )),
     );
   }
-  // ══════════════════════════════════════════════════════════════════════════
-  //  MEASUREMENTS TABLE
-  // ══════════════════════════════════════════════════════════════════════════
+
   static pw.Widget _buildMeasTable(List<PostureMeasurement> items) {
     pw.Widget hCell(String t,
         {pw.Alignment align = pw.Alignment.centerLeft}) =>
@@ -423,8 +420,7 @@ class PosturePdfService {
               dCell(m.code, bold: true, color: sc),
               dCell(m.label),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 7),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                 child: pw.Center(
                   child: pw.Text(
                     '${m.angleDeg.toStringAsFixed(1)}°',
@@ -438,14 +434,15 @@ class PosturePdfService {
               ),
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 6, vertical: 5),
+                    horizontal: 5, vertical: 3),
                 child: pw.Center(
-                  child: pw.Container(
+                  child:
+                  pw.Container(
                     padding: const pw.EdgeInsets.symmetric(
                         horizontal: 7, vertical: 2),
                     decoration: pw.BoxDecoration(
                       color: sc,
-                      borderRadius: pw.BorderRadius.circular(10),
+                      borderRadius: pw.BorderRadius.circular(4),
                     ),
                     child: pw.Text(
                       _statusLabel(m.status),
@@ -465,9 +462,7 @@ class PosturePdfService {
       ],
     );
   }
-  // ══════════════════════════════════════════════════════════════════════════
-  //  DETAILED FINDINGS TABLE
-  // ══════════════════════════════════════════════════════════════════════════
+
   static pw.Widget _buildFindingsTable(
       List<PostureMeasurement> measurements)
   {
@@ -570,9 +565,7 @@ class PosturePdfService {
       ],
     );
   }
-  // ══════════════════════════════════════════════════════════════════════════
-  //  ISSUES LIST
-  // ══════════════════════════════════════════════════════════════════════════
+
   static pw.Widget _buildIssuesList(List<String> problems) {
     return pw.Container(
       width: double.infinity,
@@ -609,9 +602,7 @@ class PosturePdfService {
       ),
     );
   }
-  // ══════════════════════════════════════════════════════════════════════════
-  //  SCORE PILLS ROW  (Good / Mild / Moderate / Severe counts)
-  // ══════════════════════════════════════════════════════════════════════════
+
   static pw.Widget _buildScoreRow(PostureReport report) {
     final counts = [
       (
@@ -667,9 +658,7 @@ class PosturePdfService {
       }).toList(),
     );
   }
-  // ══════════════════════════════════════════════════════════════════════════
-  //  EXERCISES TABLE  (S.No · Exercise · Description & Tip · Sets · Reps)
-  // ══════════════════════════════════════════════════════════════════════════
+
   static pw.Widget _buildExercisesTable(
       List<ExerciseSuggestion> exercises)
   {
@@ -793,9 +782,7 @@ class PosturePdfService {
       ],
     );
   }
-  // ══════════════════════════════════════════════════════════════════════════
-  //  TOTAL BAR  — exact invoice cyan TOTAL bar, right-aligned
-  // ══════════════════════════════════════════════════════════════════════════
+
   static pw.Widget _buildTotalBar(PostureReport report) {
     final good  = report.measurements
         .where((m) => m.status == 'good')
@@ -882,7 +869,6 @@ class PosturePdfService {
       ),
     );
   }
-
 
   static Future<void> sharePdf(File file) async {
     await Share.shareXFiles(
